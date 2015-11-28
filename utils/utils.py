@@ -62,3 +62,58 @@ def UtilJSONDecoderDictToObj(d):
         inst = d
     return inst
 
+class UtilMultiFile(UtilObject):
+    """
+    Keeps specified number of files opened, for read or write
+    Attributes:
+        mode - read or write
+        maxCount - maximum number of opened files at any given moment
+        openCount - number of times files have been opened
+        xactCount - number of transactions (reads or writes)
+        fileList - list of open file names, sorted by the time
+        fileDict - map of file name to a file handle
+    """
+
+    def __init__(self, maxCount, mode):
+        self.maxCount = maxCount
+        self.mode = mode
+        self.fileList = []
+        self.fileDict = {}
+        self.openCount = 0
+        self.xactCount = 0
+
+    def write(self, fileName, line):
+        assert(mode[0] == 'w')
+        f = self.fileHandle(fileName)
+        try:
+            f.write(line)
+        except:
+            print("Could not write to %s" % fileName)
+            return
+        self.xactCount += 1
+
+    def fileHandle(self, fileName):
+        if fileName not in self.fileDict:
+            if len(self.fileList) == self.maxCount:
+                oldFileName = self.fileList[0]
+                self.fileDict[oldFileName].close()
+                del self.fileDict[oldFileName]
+                self.fileList = self.fileList[1:]
+            try:
+                f = open(fileName, self.mode)
+            except:
+                print("Could not open %s" % fileName)
+                return None
+            self.fileDict[fileName] = f
+            self.fileList.append(fileName)
+            self.openCount += 1
+        return self.fileDict[fileName]
+
+    def closeAll(self):
+        for f in self.fileDict.values():
+            f.close()
+        self.fileDict = {}
+        self.fileList = []
+
+    def getStats(self):
+        return "Opened %u transactions %u" % (self.openCount, self.xactCount)
