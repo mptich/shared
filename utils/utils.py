@@ -3,6 +3,7 @@
 import json
 
 UtilObjectKey = "__utilobjectkey__"
+UtilSetKey = "__utilsetkey__"
 
 class UtilError(Exception):
 
@@ -36,6 +37,21 @@ class UtilObject(object):
     def __str__(self):
         return repr(self)
 
+    def __eq__(self, other):
+        return self.key() == other.key()
+
+    def __ne__(self, other):
+        return self.key() != other.key()
+
+    def __le__(self, other):
+        return not self.key() > other.key()
+
+    def __gt__(self, other):
+        return self.key() > other.key()
+
+    def __hash__(self):
+        return hash(self.key())
+
 
 class UtilJSONEncoder(json.JSONEncoder):
     """
@@ -47,8 +63,11 @@ class UtilJSONEncoder(json.JSONEncoder):
             d = obj.__dict__
             d[UtilObjectKey] = obj.__module__ + '.' + obj.__class__.__name__
             return d
-        else:
-            return json.JSONEncoder.default(self, obj)
+        if isinstance(obj, set):
+            d = {}
+            d[UtilSetKey] = list(obj)
+            return d
+        return obj
 
 def UtilJSONDecoderDictToObj(d):
     if UtilObjectKey in d:
@@ -58,6 +77,8 @@ def UtilJSONDecoderDictToObj(d):
         classType = getattr(module, className)
         kwargs = dict((x.encode('ascii'), y) for x, y in d.items())
         inst = classType(**kwargs)
+    elif UtilSetKey in d:
+        inst = set(d[UtilSetKey])
     else:
         inst = d
     return inst
@@ -68,7 +89,7 @@ class UtilMultiFile(UtilObject):
     Attributes:
         mode - read or write
         maxCount - maximum number of opened files at any given moment
-        openCount - number of times files have been opened
+        hitCount - number of open file hits
         xactCount - number of transactions (reads or writes)
         fileList - list of open file names, sorted by the time
         fileDict - map of file name to a file handle
@@ -79,11 +100,11 @@ class UtilMultiFile(UtilObject):
         self.mode = mode
         self.fileList = []
         self.fileDict = {}
-        self.openCount = 0
+        self.hitCount = 0
         self.xactCount = 0
 
     def write(self, fileName, line):
-        assert(mode[0] == 'w')
+        assert(self.mode[0] in ('w', 'a'))
         f = self.fileHandle(fileName)
         try:
             f.write(line)
@@ -106,7 +127,8 @@ class UtilMultiFile(UtilObject):
                 return None
             self.fileDict[fileName] = f
             self.fileList.append(fileName)
-            self.openCount += 1
+        else:
+            self.hitCount += 1
         return self.fileDict[fileName]
 
     def closeAll(self):
@@ -116,4 +138,5 @@ class UtilMultiFile(UtilObject):
         self.fileList = []
 
     def getStats(self):
-        return "Opened %u transactions %u" % (self.openCount, self.xactCount)
+        return "%u hits out of %u transactions: %u%%" % (self.hitCount,
+                self.xactCount, 100 * self.hitCount / self.xactCount)
