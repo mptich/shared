@@ -5,6 +5,11 @@ import json
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
 
+# Simple hashable dictionary
+class UtilDict(dict):
+    def __hash__(self):
+        return hash(tuple([(k, tuple(v)) for (k,v) in sorted(self.items())]))
+
 class UtilError(Exception):
 
     def __init__(self, value):
