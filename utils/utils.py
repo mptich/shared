@@ -144,4 +144,5 @@ class UtilMultiFile(UtilObject):
 
     def getStats(self):
         return "%u hits out of %u transactions: %u%%" % (self.hitCount,
-                self.xactCount, 100 * self.hitCount / self.xactCount)
+                self.xactCount, (100 * self.hitCount / self.xactCount) if
+                self.xactCount else 0)
