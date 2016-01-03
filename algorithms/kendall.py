@@ -6,7 +6,7 @@ import numpy as np
 # list1 - one of the input lists
 # list2 - the 2nd input list
 # weights - list of weights
-def calculateWeghetedKendall(list1, list2, weights):
+def calculateWeighetedKendall(list1, list2, weights):
     dist = 0.0
     length = len(list1)
     if length < 2:
@@ -70,18 +70,18 @@ def mergeSublists(src1, src2, dst, dist):
 
 # Test
 if __name__ == "__main__":
-    print calculateWeghetedKendall([1,2,3,4], [4,3,2,1], [0.6, 0.8, 1, 0.3])
-    print calculateWeghetedKendall([1,2,3,4,5], [1,2,3,4,5], [0.6, 0.8, 1,
+    print calculateWeighetedKendall([1,2,3,4], [4,3,2,1], [0.6, 0.8, 1, 0.3])
+    print calculateWeighetedKendall([1,2,3,4,5], [1,2,3,4,5], [0.6, 0.8, 1,
         0.3, 0.8])
-    print calculateWeghetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 100, 100,
+    print calculateWeighetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 100, 100,
         100, 0.8])
-    print calculateWeghetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 1, 1,
+    print calculateWeighetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 1, 1,
         1, 0.8])
-    print calculateWeghetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 0.1, 0.1,
+    print calculateWeighetedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 0.1, 0.1,
         0.1, 0.8])
-    print calculateWeghetedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 0.6,
+    print calculateWeighetedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 0.6,
         0.4, 0.3, 0.2, 0.1])
-    print calculateWeghetedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 1,
+    print calculateWeighetedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 1,
         1, 1, 1, 1])
 
 

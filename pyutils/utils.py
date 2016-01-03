@@ -74,12 +74,20 @@ class UtilJSONEncoder(json.JSONEncoder):
             return d
         return obj
 
+# This is optimization - caching imported classes
+importedClassesDict = {}
+
 def UtilJSONDecoderDictToObj(d):
     if UtilObjectKey in d:
-        moduleName, _, className = d[UtilObjectKey].rpartition('.')
-        assert(moduleName)
-        module = __import__(moduleName)
-        classType = getattr(module, className)
+        fullClassName = d[UtilObjectKey]
+        if fullClassName in importedClassesDict:
+            classType = importedClassesDict[fullClassName]
+        else:
+            moduleName, _, className = fullClassName.rpartition('.')
+            assert(moduleName)
+            module = __import__(moduleName)
+            classType = getattr(module, className)
+            importedClassesDict[fullClassName] = classType
         kwargs = dict((x.encode('ascii'), y) for x, y in d.items())
         inst = classType(**kwargs)
     elif UtilSetKey in d:
