@@ -83,6 +83,8 @@ if __name__ == "__main__":
         0.4, 0.3, 0.2, 0.1])
     print calculateWeightedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 1,
         1, 1, 1, 1])
+    print calculateWeightedKendall([1,2,3,4,5,6], [6,5,2,4,3,1], [1, 1,
+        1, 1, 1, 1])
 
 
 
