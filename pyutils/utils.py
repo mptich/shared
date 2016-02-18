@@ -1,6 +1,9 @@
 # Shared utilities and classes
 
 import json
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
 
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
@@ -156,3 +159,14 @@ class UtilMultiFile(UtilObject):
         return "%u hits out of %u transactions: %u%%" % (self.hitCount,
                 self.xactCount, (100 * self.hitCount / self.xactCount) if
                 self.xactCount else 0)
+
+
+def UtilDrawHistogram(inputList):
+    input = np.array(sorted(inputList))
+    gkde = stats.gaussian_kde(input, bw_method='silverman')
+    xCoord = np.arange(input[0], input[-1], 1.)
+    yCoord = gkde.evaluate(xCoord)
+    plt.plot(xCoord, yCoord)
+    plt.show()
+
+

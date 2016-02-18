@@ -5,8 +5,8 @@ import numpy as np
 import operator
 import copy
 import imp
-imp.load_source("kendall", "../algorithms/kendall.py")
-from kendall import calculateWeightedKendall
+import os
+from ..algorithms.kendall import calculateWeightedKendall
 
 class DistanceMatrixRow(UtilObject):
     """
@@ -43,7 +43,7 @@ class DistanceMatrix(UtilObject):
         self.size = kwargs["size"]
         self.array = np.array(shape=(self.size, self.size), dtype=float,
                               order='C')
-        self.names = sorted(kwargs.get("names", []))
+        self.names = sorted(kwargs["names"])
 
     def convertFromDoubleDict(self, doubleDict):
         self.size = len(doubleDict)
@@ -52,6 +52,7 @@ class DistanceMatrix(UtilObject):
             operator.itemgetter(0))]
         self.array = np.array([[y[1] for y in sorted(x.items(), key =
             operator.itemgetter(0))] for x in temp])
+        assert(self.array.shape == (self.size, self.size))
 
     def clone(self):
         return DistanceMatrix(size = self.size, names = self.names)
@@ -60,10 +61,6 @@ class DistanceMatrix(UtilObject):
         assert(len(rowList) == self.size)
         assert(rowNumber < self.size)
         self.array[: rowNumber] = rowList
-
-    def addName(selfself, index, name):
-        assert(index < self.size)
-        self.names[index] = name
 
     def getSize(self):
         return self.size
@@ -94,12 +91,12 @@ def distanceMatrixCorrelation(matrix1, matrix2, weights):
 
     size = matrix1.getSize()
     assert(size == matrix2.getSize())
-    assert((not weights) or (size == weights.getSize))
+    assert((not weights) or (size == weights.getSize()))
     kendallList = [None] * size
     weightsAllOnes = [1.0] * size
     for i in range(size):
-        kendallList[i] = calculateWeightedKendall(list(matrix1[i]),
-            list(matrix2[i]), list(weights[i]) if weights else weightsAllOnes)
+        kendallList[i] = calculateWeightedKendall(matrix1[i],
+            matrix2[i], weights[i] if weights else weightsAllOnes)
     sortedNames = sorted(zip(matrix1.names, kendallList), key =
         operator.itemgetter(1))
     return (np.mean(kendallList), np.std(kendallList), sortedNames)
