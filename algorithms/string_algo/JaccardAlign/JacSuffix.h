@@ -14,7 +14,7 @@
 #include <string>
 #include <assert.h>
 
-#include "blosum62.h"
+#include "blosum.h"
 
 using namespace std;
 

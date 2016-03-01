@@ -26,12 +26,14 @@ static unsigned char blosumCharToOrdinal[] = {
 file_template2 = \
 """
 };
+
 static int blosumMatrix[][24] = {
 """
 
 file_template3 = \
 """
-};
+
+}};
 
 #endif
 """
@@ -63,9 +65,12 @@ def main():
 
     output = ""
     for c1 in protein_string:
+      if output:
+        output += "}, "
+      separator = "{"
       for c2 in protein_string:
-        if output:
-          output += ", "
+        output += separator
+        separator = ", "
         output += ("%s" % str(matrix.lookup_score(c1, c2)))
 
     f.write(output)

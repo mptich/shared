@@ -26,7 +26,7 @@
 
 using namespace std;
 
-#include "blosum62.h"
+#include "blosum.h"
 
 #include "JaccardAlignCmds.h"
 

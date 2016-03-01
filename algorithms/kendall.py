@@ -6,9 +6,11 @@ import numpy as np
 # list1 - one of the input lists
 # list2 - the 2nd input list
 # weights - list of weights
-def calculateWeightedKendall(list1, list2, weights):
+def calculateWeightedKendall(list1, list2, weights=None):
     dist = 0.0
     length = len(list1)
+    if weights is None:
+        weights = [1.0] * length
     if length < 2:
         return 1.
     assert(length == len(list2))
@@ -56,6 +58,7 @@ def mergeSublists(src1, src2, dst, dist):
             dst.append(src1[pos1])
             pos1 += 1
         else:
+            assert(src1[pos1][0] < src2[pos2][0])
             dst.append(src2[pos2])
             move = length1 - pos1
             dist += integWeights[move - 1] + src2[pos2][2] * move

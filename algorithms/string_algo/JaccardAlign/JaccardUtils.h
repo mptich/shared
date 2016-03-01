@@ -8,7 +8,11 @@
 #ifndef JACCARDUTILS_H_
 #define JACCARDUTILS_H_
 
+#include <map>
+#include <set>
+
 set<string> jaccardSetFromString(string const &s, int len, int *pRepeats);
+map<string, int> jaccardDictFromString(string const &s, int len, int *pRepeats);
 string const *jaccardFindBestMatch(string const &s, set<string> const &setStr);
 int jaccardSuffixScore(const string &s1, const string &s2);
 

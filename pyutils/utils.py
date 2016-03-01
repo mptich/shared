@@ -163,10 +163,23 @@ class UtilMultiFile(UtilObject):
 
 def UtilDrawHistogram(inputList):
     input = np.array(sorted(inputList))
-    gkde = stats.gaussian_kde(input, bw_method='silverman')
-    xCoord = np.arange(input[0], input[-1], 1.)
-    yCoord = gkde.evaluate(xCoord)
-    plt.plot(xCoord, yCoord)
-    plt.show()
+    gkde = None
+    try:
+        gkde = stats.gaussian_kde(input, bw_method='silverman')
+    except:
+        print ("gaussian_kde failed on list %s" % repr(inputList))
+    if gkde:
+        start = input[0]
+        stop = input[-1]
+        if start != stop:
+            step = (stop - start) / 200.
+        else:
+            start = start - 1
+            stop = start + 1
+            step = 1.0
+        xCoord = np.arange(start, stop, step)
+        yCoord = gkde.evaluate(xCoord)
+        plt.plot(xCoord, yCoord)
+        plt.show()
 
 

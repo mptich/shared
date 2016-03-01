@@ -18,11 +18,11 @@ def JaccardSuffixDistance(suff1, suff2, matrix):
     assert(rate2 >= rate)
     return (rate, rate1, rate2)
 
-def JaccardSuffixRate(suff1, suff2, marix):
+def JaccardSuffixRate(suff1, suff2, matrix):
     """
     :param suff1 - first suffix
     :param suff2 - 2nd suffix
-    :marix - Blosum Matrix
+    :matrix - Blosum Matrix
     :return - absolute rate of (suff1, suff2) pair, based on the matrix
     """
     assert(len(suff1) == len(suff2))

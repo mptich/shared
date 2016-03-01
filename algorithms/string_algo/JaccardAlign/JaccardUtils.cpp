@@ -18,9 +18,10 @@
 
 using namespace std;
 
-#include "blosum62.h"
+#include "blosum.h"
 
 #include "JaccardUtils.h"
+
 
 set<string> jaccardSetFromString(string const &s, int len, int *pRepeats) {
 	set<string> ret;
@@ -34,6 +35,25 @@ set<string> jaccardSetFromString(string const &s, int len, int *pRepeats) {
 	}
 	if (pRepeats)
 		*pRepeats = repeats;
+	return ret;
+}
+
+// Builds a dictionary <Suffix> -> <Its position in the protein>. Suffixes with multiple
+// positions are discarded.
+map<string, int> jaccardDictFromString(string const &s, int len, int *pRepeats) {
+	map<string, int> ret;
+	set<string> repeatSet;
+	for(int i=0; i <= s.length()-len; i++) {
+		string suff = s.substr(i,len);
+		if (ret.find(suff) == ret.end())
+			ret[suff] = i;
+		else
+			repeatSet.insert(suff);
+	}
+	for (set<string>::const_iterator it = repeatSet.begin(); it != repeatSet.end(); it++)
+		ret.erase(*it);
+	if (pRepeats)
+		*pRepeats = repeatSet.size();
 	return ret;
 }
 
@@ -55,7 +75,8 @@ int jaccardSuffixScore(const string &s1, const string &s2) {
 	int score = 0;
 	for (string::const_iterator it1 = s1.begin(), it2 = s2.begin();
 			it1 != s1.end(); it1++, it2++)
-		score += blosumMatrix[blosumCharToOrdinal[*it1]][blosumCharToOrdinal[*it2]];
+		score += blosumMatrix[blosumCharToOrdinal[(int) *it1]]
+							  [blosumCharToOrdinal[(int) *it2]];
 	return score;
 }
 
