@@ -24,6 +24,27 @@ def calculateWeightedKendall(list1, list2, weights=None):
     dstList = sorted(dstList, key = lambda x: x[1])
     dstList = sorted(dstList, key = lambda x: x[0])
 
+    # Calculate the total weight of transactions in teh worst case
+    # It is sum(weights) * (length - 1), minus all possible transactions
+    # within the intervals where values of list1 are equal
+    worstCaseWeight = sum(weights) * (length - 1)
+    prevValue = None
+    eqCount = 1
+    accumWeight = 0.
+    for curValue, _, weight in (dstList + [(None, None, None)]):
+        if curValue == prevValue:
+            eqCount += 1
+            accumWeight += weight
+        else:
+            if eqCount > 1:
+                worstCaseWeight -= accumWeight * (eqCount - 1)
+            eqCount = 1
+            accumWeight = weight
+            prevValue = curValue
+    if worstCaseWeight == 0.:
+        # All values in list1 are equal
+        return 0.
+
     mergeLen = 1
     while mergeLen < length:
         srcList = np.array(dstList)
@@ -38,7 +59,7 @@ def calculateWeightedKendall(list1, list2, weights=None):
         dstList += list(srcList[startPos:])
         mergeLen <<= 1
 
-    return 1. - 2 * dist / sum(weights) / (length - 1)
+    return 1. - 2 * dist / worstCaseWeight
 
 # Merge sort with summarazing weights
 def mergeSublists(src1, src2, dst, dist):
@@ -88,6 +109,10 @@ if __name__ == "__main__":
         1, 1, 1, 1])
     print calculateWeightedKendall([1,2,3,4,5,6], [6,5,2,4,3,1], [1, 1,
         1, 1, 1, 1])
+    print calculateWeightedKendall([1,2,2,1,2,1], [4,1,2,5,3,6], [0.6, 0.5,
+        1.7, 10., 4.3, 0.8])
+    print calculateWeightedKendall([1,2,2,1,2,1], [3,6,5,2,4,1], [0.6, 0.5,
+        1.7, 10., 4.3, 0.8])
 
 
 
