@@ -1,4 +1,4 @@
-# Distance matrix is built on teh top of numpy arrays
+# Distance matrix is built on the top of numpy arrays
 
 from utils import *
 import numpy as np
@@ -6,7 +6,13 @@ import operator
 import copy
 import imp
 import os
-from ..algorithms.kendall import calculateWeightedKendall
+from collections import defaultdict as DefDict
+
+# Kendal cannot be loaded relatively because this is not alwase a package
+pathToKendall = os.path.abspath(__file__).rsplit('/', 1)[0] + \
+                "/../algorithms/kendall.py"
+kendall = imp.load_source('kendall', pathToKendall)
+from kendall import calculateWeightedKendall
 
 class DistanceMatrixRow(UtilObject):
     """
@@ -80,7 +86,8 @@ class DistanceMatrix(UtilObject):
         return DistanceMatrixRow(self.names.index(itemId), self)
 
 
-def distanceMatrixCorrelation(matrix1, matrix2, weights):
+def distanceMatrixCorrelation(matrix1, matrix2, weights = None,
+                              collectComponents = False):
     """
     :param matrix1:
     :param matrix2:
@@ -94,12 +101,26 @@ def distanceMatrixCorrelation(matrix1, matrix2, weights):
     assert((not weights) or (size == weights.getSize()))
     kendallList = [None] * size
     weightsAllOnes = [1.0] * size
+    compDict = DefDict(list)
+    compSet = set()
+    if collectComponents:
+        for vl in matrix1.getArray():
+            for v in vl:
+                compSet.add(v)
     for i in range(size):
+        components = DefDict(float)
         kendallList[i] = calculateWeightedKendall(matrix1[i],
-            matrix2[i], weights[i] if weights else weightsAllOnes)
+            matrix2[i], weights = weights[i] if weights else None,
+            components = components if collectComponents else None)
+        for k in compSet:
+            compDict[k].append(components[k])
     sortedNames = sorted(zip(matrix1.names, kendallList), key =
         operator.itemgetter(1))
-    return (np.mean(kendallList), np.std(kendallList), sortedNames)
+    compList = None
+    if collectComponents:
+        compList = map(np.mean, map(operator.itemgetter(1),
+            sorted(compDict.items(), key = operator.itemgetter(0))))
+    return (np.mean(kendallList), np.std(kendallList), sortedNames, compList)
 
 
 # Test
@@ -120,7 +141,7 @@ if __name__ == "__main__":
     dm2 = copy.deepcopy(dm1)
     dm2['a']['c'] = dm2['c']['a'] = 0.5
 
-    print distanceMatrixCorrelation(dm1, dm2, None)
+    print distanceMatrixCorrelation(dm1, dm2, None, True)
 
 
 
