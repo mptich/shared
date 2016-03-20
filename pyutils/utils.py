@@ -1,9 +1,15 @@
 # Shared utilities and classes
 
+import os
 import json
+try:
+   import cPickle as pickle
+except:
+   import pickle
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
+from collections import defaultdict as DefDict
 
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
@@ -116,18 +122,28 @@ class UtilMultiFile(UtilObject):
         self.mode = mode
         self.fileList = []
         self.fileDict = {}
+        self.fileCache = DefDict(list)
         self.hitCount = 0
         self.xactCount = 0
 
     def write(self, fileName, line):
+        # Try to cache it first
+        lines = self.fileCache[fileName]
+        lines.append(line)
+        if len(lines) > 100:
+            self.cacheFlush(fileName)
+
+    def cacheFlush(self, fileName):
         assert(self.mode[0] in ('w', 'a'))
         f = self.fileHandle(fileName)
-        try:
-            f.write(line)
-        except IOError as e:
-            print("Could not write to %s: error %d %s" % (fileName, e.errno,
-                                                          e.strerror))
-            return
+        for l in self.fileCache[fileName]:
+            try:
+                f.write(l)
+            except IOError as e:
+                print("Could not write to %s: error %d %s" % (
+                    fileName, e.errno, e.strerror))
+                return
+        self.fileCache[fileName] = []
         self.xactCount += 1
 
     def fileHandle(self, fileName):
@@ -150,6 +166,8 @@ class UtilMultiFile(UtilObject):
         return self.fileDict[fileName]
 
     def closeAll(self):
+        for fileName in self.fileCache.keys():
+            self.cacheFlush(fileName)
         for f in self.fileDict.values():
             f.close()
         self.fileDict = {}
@@ -182,4 +200,24 @@ def UtilDrawHistogram(inputList):
         plt.plot(xCoord, yCoord)
         plt.show()
 
+def UtilStore(obj, fileName):
+    _, ext = os.path.splitext(fileName)
+    if ext.lower() == ".json":
+        json.dump(obj, open(fileName, 'wt'), cls = UtilJSONEncoder,
+            sort_keys=True, indent=4)
+        return
+    if ext.lower() == ".pck":
+        pickle.dump(obj, open(fileName, 'wb'))
+        return
+    raise ValueError("Bad file name %s" % fileName)
 
+def UtilLoad(fileName):
+    _, ext = os.path.splitext(fileName)
+    if ext.lower() == ".json":
+        obj = json.load(open(fileName, 'rt'),
+            object_hook = UtilJSONDecoderDictToObj)
+        return obj
+    if ext.lower() == ".pck":
+        obj = pickle.load(open(fileName, 'rb'))
+        return obj
+    raise ValueError("Bad file name %s" % fileName)
