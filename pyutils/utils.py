@@ -179,26 +179,36 @@ class UtilMultiFile(UtilObject):
                 self.xactCount else 0)
 
 
-def UtilDrawHistogram(inputList):
+def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
+    if inputList is None:
+        assert(show)
+        plt.show()
+        return
     input = np.array(sorted(inputList))
     gkde = None
+    start = input[0]
+    stop = input[-1]
+    if start != stop:
+        step = (stop - start) / 200.
+        if bwFactor:
+            bandwidth = (stop - start) / bwFactor
+        else:
+            bandwidth = 'silverman'
+    else:
+        start = start - 1
+        stop = start + 1
+        step = 1.0
+        bandwidth = 1.0
     try:
-        gkde = stats.gaussian_kde(input, bw_method='silverman')
+        gkde = stats.gaussian_kde(input, bw_method=bandwidth)
     except:
         print ("gaussian_kde failed on list %s" % repr(inputList))
     if gkde:
-        start = input[0]
-        stop = input[-1]
-        if start != stop:
-            step = (stop - start) / 200.
-        else:
-            start = start - 1
-            stop = start + 1
-            step = 1.0
         xCoord = np.arange(start, stop, step)
         yCoord = gkde.evaluate(xCoord)
         plt.plot(xCoord, yCoord)
-        plt.show()
+        if show:
+            plt.show()
 
 def UtilStore(obj, fileName):
     _, ext = os.path.splitext(fileName)
