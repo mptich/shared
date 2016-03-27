@@ -70,7 +70,7 @@ def calculateWeightedKendall(list1, list2, weights=None, components=None):
                 el[2] * abs(ind - pos)
         # Normalize components values
         s = sum(components.values())
-        for k, v in components.items():
+        for k, v in components.iteritems():
             if s != 0.:
                 components[k] = v / s
             else:

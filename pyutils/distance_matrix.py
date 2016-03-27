@@ -54,9 +54,9 @@ class DistanceMatrix(UtilObject):
     def convertFromDoubleDict(self, doubleDict):
         self.size = len(doubleDict)
         self.names = sorted(doubleDict.keys())
-        temp = [x[1] for x in sorted(doubleDict.items(), key =
+        temp = [x[1] for x in sorted(doubleDict.iteritems(), key =
             operator.itemgetter(0))]
-        self.array = np.array([[y[1] for y in sorted(x.items(), key =
+        self.array = np.array([[y[1] for y in sorted(x.iteritems(), key =
             operator.itemgetter(0))] for x in temp])
         assert(self.array.shape == (self.size, self.size))
 
@@ -119,7 +119,7 @@ def distanceMatrixCorrelation(matrix1, matrix2, weights = None,
     compList = None
     if collectComponents:
         compList = map(np.mean, map(operator.itemgetter(1),
-            sorted(compDict.items(), key = operator.itemgetter(0))))
+            sorted(compDict.iteritems(), key = operator.itemgetter(0))))
     return (np.mean(kendallList), np.std(kendallList), sortedNames, compList)
 
 

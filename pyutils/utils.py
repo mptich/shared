@@ -17,7 +17,8 @@ UtilSetKey = "__utilsetkey__"
 # Simple hashable dictionary
 class UtilDict(dict):
     def __hash__(self):
-        return hash(tuple([(k, tuple(v)) for (k,v) in sorted(self.items())]))
+        return hash(tuple([(k, tuple(v)) for (k,v) in
+            sorted(self.iteritems())]))
 
 class UtilError(Exception):
 
@@ -39,7 +40,7 @@ class UtilObject(object):
     def buildFromDict(self, d):
         if UtilObjectKey in d:
             d.pop(UtilObjectKey)
-            for k, v in d.items():
+            for k, v in d.iteritems():
                 setattr(self, k, v)
             return True
         return False
@@ -52,58 +53,80 @@ class UtilObject(object):
         return repr(self)
 
     def __eq__(self, other):
-        return self.key() == other.key()
+        return self.key == other.key
 
     def __ne__(self, other):
-        return self.key() != other.key()
+        return self.key != other.key
 
     def __le__(self, other):
-        return not self.key() > other.key()
+        return not self.key > other.key
 
     def __gt__(self, other):
-        return self.key() > other.key()
+        return self.key > other.key
 
     def __hash__(self):
-        return hash(self.key())
+        return hash(self.key)
 
+def UtilJSONEncoderFactory(progrIndPeriod = 10000):
 
-class UtilJSONEncoder(json.JSONEncoder):
-    """
-    Converts a python object, where the object is derived from UtilObject,
-    into an object that can be decoded using the GenomeJSONDecoder.
-    """
-    def default(self, obj):
-        if isinstance(obj, UtilObject):
-            d = obj.__dict__
-            d[UtilObjectKey] = obj.__module__ + '.' + obj.__class__.__name__
-            return d
-        if isinstance(obj, set):
-            d = {}
-            d[UtilSetKey] = list(obj)
-            return d
-        return obj
+    class UtilJSONEncoder(json.JSONEncoder):
+        """
+        Converts a python object, where the object is derived
+        from UtilObject, into an object that can be decoded
+        using the GenomeJSONDecoder.
+        """
+        def __init__(self, *args, **kwargs):
+            super(UtilJSONEncoder, self).__init__(*args, **kwargs)
+            self.progrIndCount = 0
+
+        def default(self, obj):
+            self.progrIndCount += 1
+            if self.progrIndCount % progrIndPeriod == 0:
+                print ("\rProgress %u" % self.progrIndCount),
+            if isinstance(obj, UtilObject):
+                d = obj.__dict__
+                d[UtilObjectKey] =\
+                    obj.__module__ + '.' + obj.__class__.__name__
+                return d
+            if isinstance(obj, set):
+                d = {}
+                d[UtilSetKey] = list(obj)
+                return d
+            return obj
+
+    return UtilJSONEncoder
+
 
 # This is optimization - caching imported classes
 importedClassesDict = {}
 
-def UtilJSONDecoderDictToObj(d):
-    if UtilObjectKey in d:
-        fullClassName = d[UtilObjectKey]
-        if fullClassName in importedClassesDict:
-            classType = importedClassesDict[fullClassName]
+def UtilJsonDecoderFactory(progrIndPeriod = 10000):
+    progrIndCount = [0]
+
+    def UtilJSONDecoderDictToObj(d):
+        if UtilObjectKey in d:
+            fullClassName = d[UtilObjectKey]
+            if fullClassName in importedClassesDict:
+                classType = importedClassesDict[fullClassName]
+            else:
+                moduleName, _, className = fullClassName.rpartition('.')
+                assert(moduleName)
+                module = __import__(moduleName)
+                classType = getattr(module, className)
+                importedClassesDict[fullClassName] = classType
+            kwargs = dict((x.encode('ascii'), y) for x, y in d.iteritems())
+            inst = classType(**kwargs)
+        elif UtilSetKey in d:
+            inst = set(d[UtilSetKey])
         else:
-            moduleName, _, className = fullClassName.rpartition('.')
-            assert(moduleName)
-            module = __import__(moduleName)
-            classType = getattr(module, className)
-            importedClassesDict[fullClassName] = classType
-        kwargs = dict((x.encode('ascii'), y) for x, y in d.items())
-        inst = classType(**kwargs)
-    elif UtilSetKey in d:
-        inst = set(d[UtilSetKey])
-    else:
-        inst = d
-    return inst
+            inst = d
+        progrIndCount[0] += 1
+        if progrIndCount[0] % progrIndPeriod == 0:
+            print ("\rProgress %u" % progrIndCount[0]),
+        return inst
+
+    return UtilJSONDecoderDictToObj
+
 
 class UtilMultiFile(UtilObject):
     """
@@ -210,22 +233,25 @@ def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
         if show:
             plt.show()
 
-def UtilStore(obj, fileName):
+def UtilStore(obj, fileName, progrIndPeriod = 10000):
     _, ext = os.path.splitext(fileName)
     if ext.lower() == ".json":
-        json.dump(obj, open(fileName, 'wt'), cls = UtilJSONEncoder,
-            sort_keys=True, indent=4)
+        json.dump(obj, open(fileName, 'wt'),
+            cls = UtilJSONEncoderFactory(progrIndPeriod),
+            sort_keys=True, indent=4, ensure_ascii = False)
+        print("") # Next line
         return
     if ext.lower() == ".pck":
         pickle.dump(obj, open(fileName, 'wb'))
         return
     raise ValueError("Bad file name %s" % fileName)
 
-def UtilLoad(fileName):
+def UtilLoad(fileName, progrIndPeriod = 10000):
     _, ext = os.path.splitext(fileName)
     if ext.lower() == ".json":
         obj = json.load(open(fileName, 'rt'),
-            object_hook = UtilJSONDecoderDictToObj)
+            object_hook = UtilJsonDecoderFactory(progrIndPeriod))
+        print("") # Next line
         return obj
     if ext.lower() == ".pck":
         obj = pickle.load(open(fileName, 'rb'))
