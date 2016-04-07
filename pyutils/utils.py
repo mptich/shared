@@ -13,6 +13,9 @@ from collections import defaultdict as DefDict
 
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
+UtilJsonDumpMethod = "utilJsonDump"
+UtilJsonLoadMethod = "utilJsonLoad"
+UtilDumpKey = "__utildumpkey__"
 
 # Simple hashable dictionary
 class UtilDict(dict):
@@ -83,11 +86,24 @@ def UtilJSONEncoderFactory(progrIndPeriod = 10000):
             self.progrIndCount += 1
             if self.progrIndCount % progrIndPeriod == 0:
                 print ("\rProgress %u" % self.progrIndCount),
+
+            # First see if there is an alternative method to represent the
+            # class
+            if getattr(obj, UtilJsonDumpMethod, None):
+                d = {}
+                d[UtilObjectKey] =\
+                    obj.__module__ + '.' + obj.__class__.__name__
+                d[UtilDumpKey] = getattr(obj, UtilJsonDumpMethod)()
+                return d
+
+            # Generic method for UtilObject instamces
             if isinstance(obj, UtilObject):
                 d = obj.__dict__
                 d[UtilObjectKey] =\
                     obj.__module__ + '.' + obj.__class__.__name__
                 return d
+
+            # Method for sets (not represented in JSON)
             if isinstance(obj, set):
                 d = {}
                 d[UtilSetKey] = list(obj)
