@@ -10,6 +10,7 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
+import math
 
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
@@ -273,3 +274,45 @@ def UtilLoad(fileName, progrIndPeriod = 10000):
         obj = pickle.load(open(fileName, 'rb'))
         return obj
     raise ValueError("Bad file name %s" % fileName)
+
+
+class UtilNormDistrib(UtilObject):
+    """
+    Describes characteristics of normally ditributed variable.
+    Compatible with UtilObject JSON interface
+    """
+
+    def __init__(self, **kwargs):
+        if self.buildFromDict(kwargs):
+            return
+        self.__dict__.update(kwargs)
+
+    def combine(self, other):
+        mean = (self.mean * self.count + other.mean * other.count) / \
+            (self.count + other.count)
+        selfStd = (self.std * self.std) * (self.count - 1)
+        otherStd = (other.std * other.std) * (other.count - 1)
+        selfDelta = self.mean - mean
+        otherDelta = other.mean - mean
+        selfDelta = selfDelta * selfDelta * self.count
+        otherDelta = otherDelta * otherDelta * other.count
+
+        self.count = self.count + other.count
+        self.mean = mean
+        self.std = math.sqrt((selfStd + otherStd + selfDelta + otherDelta) / \
+                   (self.count - 1))
+        return self
+
+    def utilJsonDump(self):
+        return repr(self)
+
+    def __repr__(self):
+        return "<mean: %f std: %f cnt: %u>" % (self.mean, self.std,
+            self.count)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __hash__(self):
+        raise AttributeError("%s is not hashable" %
+            self.__class__.__name__)
