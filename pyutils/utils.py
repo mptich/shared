@@ -288,20 +288,17 @@ class UtilNormDistrib(UtilObject):
         self.__dict__.update(kwargs)
 
     def combine(self, other):
-        mean = (self.mean * self.count + other.mean * other.count) / \
-            (self.count + other.count)
+        count = self.count + other.count
+        mean = (self.mean * self.count + other.mean * other.count) / count
         selfStd = (self.std * self.std) * (self.count - 1)
         otherStd = (other.std * other.std) * (other.count - 1)
         selfDelta = self.mean - mean
         otherDelta = other.mean - mean
         selfDelta = selfDelta * selfDelta * self.count
         otherDelta = otherDelta * otherDelta * other.count
-
-        self.count = self.count + other.count
-        self.mean = mean
-        self.std = math.sqrt((selfStd + otherStd + selfDelta + otherDelta) / \
-                   (self.count - 1))
-        return self
+        return UtilNormDistrib(mean = mean, count = count,
+            std = math.sqrt((selfStd + otherStd + selfDelta + otherDelta) / \
+            (count - 1)))
 
     def utilJsonDump(self):
         return repr(self)
