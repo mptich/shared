@@ -71,6 +71,19 @@ class UtilObject(object):
     def __hash__(self):
         return hash(self.key)
 
+# Universal function creator
+class UtilCaller(UtilObject):
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self, *args, **kwargs):
+        d = self.kwargs.copy()
+        d.update(kwargs)
+        return self.func(*(self.args + args), **d)
+
+
 def UtilJSONEncoderFactory(progrIndPeriod = 10000):
 
     class UtilJSONEncoder(json.JSONEncoder):
@@ -220,9 +233,9 @@ class UtilMultiFile(UtilObject):
 
 
 def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
-    if inputList is None:
-        assert(show)
-        plt.show()
+    if not inputList:
+        if show:
+            plt.show()
         return
     input = np.array(sorted(inputList))
     gkde = None
