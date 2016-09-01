@@ -14,19 +14,23 @@ def urlRead(urlStr, fileName = None):
         data = file.read()
 
     except HTTPError as e:
-        print("getText: URL %s caused error %s code %d\n" %
+        print("urlRead: URL %s caused error %s code %d\n" %
             (urlStr, repr(e), e.code))
         return None
 
     except (URLError, IOError) as e:
-        print("getText: URL %s caused error %s\n" % (urlStr, repr(e)))
+        print("urlRead: URL %s caused error %s\n" % (urlStr, repr(e)))
         return None
         
     if file:
         file.close()
     if fileName and data:
-        with open(fileName, "wb") as f:
-            f.write(data)
+        try:
+            with open(fileName, "wb") as f:
+                f.write(data)
+        except IOError as e:
+            print("urlRead: Could not write to file %s: %s\n" % e)
+            return None
     return data
 
 
