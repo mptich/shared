@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+# Removes temporary code under JUSTATEMPs globally
+# in a git repo
+
+import subprocess
+import uuid
+
+p = subprocess.Popen(["git", "grep", "JUSTATEMP"],
+  stdout=subprocess.PIPE, 
+  stderr=subprocess.PIPE)
+out, err = p.communicate()
+lines = out.split("\n")
+
+file_set = set()
+for l in lines:
+  index = l.find(":")
+  if index != -1:
+    file_set.add(l[0:index])
+
+temp_fname = str(uuid.uuid4())
+for fn in file_set:
+  print "Processing ", fn
+  with open(fn, 'rb', 0) as a:
+    with open(temp_fname, 'w') as b:
+      rc = subprocess.call(["./fix_temp_code"], stdin=a, stdout=b)
+      if rc:
+        print "FAILED ", rc
+        continue
+      rc = subprocess.call(["mv", temp_fname, fn])
+      if rc:
+        print "FAILED ", rc
+      else:
+        print "SUCCESS"
+  
