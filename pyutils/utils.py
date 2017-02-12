@@ -53,7 +53,8 @@ class UtilObject(object):
 
 
     def __repr__(self):
-        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True)
+        return json.dumps(self, default=lambda o: o.__dict__ if hasattr(o, "__dict__") else repr(type(o)),
+                sort_keys=True)
 
     def __str__(self):
         return repr(self)
