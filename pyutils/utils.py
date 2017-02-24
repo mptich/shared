@@ -10,8 +10,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
-from PIL import Image
-from itertools import groupby
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -290,27 +288,6 @@ def UtilLoad(fileName, progrIndPeriod = 10000):
         obj = pickle.load(open(fileName, 'rb'))
         return obj
     raise ValueError("Bad file name %s" % fileName)
-
-def UtilStitchImagesHor(imgNameList, outImageName):
-    imgList = []
-    for name in imgNameList:
-        imgList.append(Image.open(name))
-
-    width = 0
-    height = 0
-    for image in imgList:
-        w, h = image.size
-        width += w
-        if height < h:
-            height = h
-
-    start = 0
-    result = Image.new('RGB', (width, height))
-    for image in imgList:
-        result.paste(im=image, box=(start, 0))
-        start += image.size[0]
-
-    result.save(outImageName)
 
 # Wrapper for primitive values, so they can be returned as
 # writable pointers from a list
