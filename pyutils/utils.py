@@ -234,7 +234,7 @@ class UtilMultiFile(UtilObject):
 
 
 def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
-    if not inputList:
+    if inputList is None:
         if show:
             plt.show()
         return
@@ -288,6 +288,48 @@ def UtilLoad(fileName, progrIndPeriod = 10000):
         obj = pickle.load(open(fileName, 'rb'))
         return obj
     raise ValueError("Bad file name %s" % fileName)
+
+def BivarPolynomialOffset(coefList, dx, dy):
+    """
+    Given an input polinomial of x and y f(x,y), calculate coefficients for f(x+dx,y+dy).
+     Taylor function is used for this
+    :param coefList: list of polynomyal coeffecients, in the order A22 A12 A02 A11 A01 A00, where
+        Amn - mth degree of x, (n-m)th degree of y
+    :param dx: offset along x
+    :param dy: offset along y
+    :return: list of updated coefficients, taking into accound dx and dy
+    """
+
+    # N is max polinomial degree. len(coefList) = (N+1)*(N+2)/2
+    N = 0
+    while ((N+1) * (N+2) / 2) < len(coefList):
+        N += 1
+    if ((N+1) * (N+2) / 2) > len(coefList):
+        raise ValueError("BivarPolynomialOffset wrong coefList length %d" % len(coefList))
+
+    c = coefList
+    if N == 0:
+        return coefList[:]
+    if N == 1:
+        return [c[0]+c[1]*dy+c[2]*dx, c[1], c[2]]
+    if N == 2:
+        return [c[0]+c[1]*dy+c[2]*dx+c[3]*dy**2+c[4]*dx*dy+c[5]*dx**2, \
+            c[1]+2*c[3]*dy+c[4]*dx, c[2]+2*c[5]*dx+c[4]*dy, c[3], c[4], c[5]]
+    if N == 3:
+        return [c[0]+c[1]*dy+c[2]*dx+c[3]*dy**2+c[4]*dx*dy+c[5]*dx**2+c[6]*dy**3+c[7]*dx*dy**2+ \
+            c[8]*dx**2*dy+c[9]*dx**3, \
+            c[1]+2*c[3]*dy+c[4]*dx+3*c[6]*dy**2+2*c[7]*dx*dy+c[8]*dx**2, \
+            c[2]+c[4]*dy+2*c[5]*dx+c[7]*dy**2+2*c[8]*dx*dy+3*c[9]*dx**2, \
+            c[3]+3*c[6]*dy+c[7]*dx, c[4]+2*c[7]*dy+2*c[8]*dx, c[5]+c[8]*dy+3*c[9]*dx, c[6], c[7], c[8], c[9]]
+
+    raise ValueError("BivarPolynomialOffset degree %d is not supported yet" % N)
+
+
+# It is expensive first time, so implement it as a function
+def UtilNumpyClippingValue(dtype):
+    info = np.finfo(dtype=dtype)
+    return info.eps * 10.
+
 
 # Wrapper for primitive values, so they can be returned as
 # writable pointers from a list
