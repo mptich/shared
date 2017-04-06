@@ -1,18 +1,20 @@
 # Image utilities
 
-import shared.pyutils.forwardCompat
+import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageChops
 from PIL import ImageFilter
-import scipy
 import scipy.ndimage.filters as scipyFilters
+from scipy import interpolate
 import math
 import sys
 from sklearn import linear_model
 import gc
 import time
+import operator
+import csv
 
 
 def UtilStitchImagesHor(imgNameList, outImageName):
@@ -40,6 +42,110 @@ def UtilImageEdge(img):
     if isinstance(img, str):
         img = Image.open(img, "r")
     return img.filter(ImageFilter.FIND_EDGES)
+
+def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
+    """
+    Makes brightness of imgDst equal to the brightness of imgSrc, averaged over gaussian kernel
+    :param imgDst: destination image
+    :param imgSrc: source image
+    :param kernelSize: size of the gaussian Kernel
+    :return: image with equalized brightness
+    """
+    brDst = imgDst.convert(mode="L")
+    brSrc = imgSrc.convert(mode="L")
+    brDstArr = scipyFilters.gaussian_filter(np.array(brDst, dtype=np.float32), sigma=kernelSize).clip(min=1.0)
+    brSrcArr = scipyFilters.gaussian_filter(np.array(brSrc, dtype=np.float32), sigma=kernelSize).clip(min=1.0)
+    ratio = brSrcArr * np.reciprocal(brDstArr)
+    imgDstArr = np.array(imgDst, dtype=np.float32)
+    h,w,_ = imgDstArr.shape
+    # TODO: change to tensor operations
+    for i in range(w):
+        for j in range(h):
+            r = ratio[j,i]
+            maxVal = np.max(imgDstArr[j,i,:].clip(min=1.0))
+            rMax = 255. / maxVal
+            imgDstArr[j,i,:] *= rMax * math.tanh(r/rMax)
+    return Image.fromarray(imgDstArr.astype(np.uint8))
+
+def UtilRemapImage(img, imgMap):
+    w,h = img.size
+    imgArr = np.asarray(img, dtype=np.float32)
+    if len(imgArr.shape) == 3:
+        newArr = np.empty((h,w,3),dtype=np.float32)
+        f = [interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr[:,:,i], 0, 1), fill_value=127.) \
+             for i in range(3)]
+        mono = False
+    else:
+        newArr = np.empty((h,w), dtype=np.float32)
+        f = interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr, 0, 1), fill_value=127.)
+        mono = True
+    # TODO: slow, write in tensor form
+    for i in range(w):
+        for j in range(h):
+            mj,mi=imgMap[j,i]
+            if mono:
+                newArr[j][i] = f(mj,mi)
+            else:
+                newArr[j,i,:] = np.array([func(mj,mi) for func in f]).reshape((3,))
+    return Image.fromarray(newArr.clip(min=0., max=255.).astype(dtype=np.uint8))
+
+def UtilBoundingRectFromMask(mask):
+    arr = np.asarray(mask)
+    h,w = arr.shape
+    yMin=forwardCompat.maxint
+    yMax=-1
+    xMin=forwardCompat.maxint
+    xMax=-1
+    for i in range(w):
+        if np.max(arr[:,i]) > 0:
+            if xMin > i:
+                xMin = i
+            if xMax < i:
+                xMax = i
+    for j in range(h):
+        if np.max(arr[j,:]) > 0:
+            if yMin > j:
+                yMin = j
+            if yMax < j:
+                yMax = j
+    return (yMin, xMin, yMax, xMax)
+
+
+def UtilImageSimpleBlend(imgBg, imgFg):
+    """
+    Preliminary blending, does not depend on the quality of the original images. Minimum blurring
+    :param imgBg: Background image, RGB
+    :param imgFg: Foreground image, RGBA
+    :return: Blended image
+    """
+    img = imgBg.copy()
+    img.paste(imgFg, (0,0), imgFg)
+    w,h = img.size
+    mask = np.asarray(imgFg)[:,:,3]
+    imgCopy = np.array(img, dtype=np.float32)
+    imgOrig = np.asarray(img)
+    # temporary - let's use a loop
+    for i in range(1,w-1):
+        for j in range(1,h-1):
+            adj = False
+            for di in range(-1,2):
+                for dj in range(-1,2):
+                    if (di,dj) == (0,0):
+                        continue
+                    jj=j+dj
+                    ii=i+di
+                    if mask[j,i] < mask[jj,ii]:
+                        if adj == False:
+                            adj = True
+                            r = 1.0
+                        t = np.random.uniform(0.2, 0.5)
+                        r += t
+                        imgCopy[j,i] += imgOrig[jj,ii] * t
+            if adj:
+                imgCopy[j,i] *= 1. / r
+    imgCopy = np.dstack([scipyFilters.gaussian_filter(imgCopy[:,:,i], sigma=0.5) for i in range(3)])
+    return Image.fromarray(imgCopy.astype(dtype=np.uint8), mode="RGB")
+
 
 def UtilMatrixToImage(mat, imageName = None, method = "direct"):
     shape = np.shape(mat)
@@ -112,8 +218,9 @@ class ImageAnnot(UtilObject):
         self.xorImage = None
         self.xorName = None
         self.overImage = None
+        self.transpImage = None
 
-    def save(self, outImgName):
+    def save(self, outImgName=None):
         image = self.image.copy()
         if self.xorImage:
             assert self.xorImage.mode == "L"
@@ -122,7 +229,12 @@ class ImageAnnot(UtilObject):
         if self.overImage:
             assert self.overImage.mode == "RGBA"
             image.paste(self.overImage, (0,0), self.overImage)
-        image.save(outImgName)
+        if self.transpImage:
+            image = Image.fromarray(np.concatenate([np.asarray(image), \
+                np.expand_dims(np.asarray(self.transpImage), axis=2)], axis=2), mode="RGBA")
+        if outImgName is not None:
+            image.save(outImgName)
+        return image
 
     def addAnnotPoint(self, x, y, size = 1, color = (0,0,0)):
         if (x < 0) or (x > self.size[0]-1) or \
@@ -154,6 +266,22 @@ class ImageAnnot(UtilObject):
         if self.xorImage.mode != "L":
             raise ValueError("XorImage is in wrong mode %s" % self.xorImage.mode)
 
+    def setTransparencyMask(self, img, binarizeThreshold=None):
+        if isinstance(img, str):
+            self.transpName = img
+            self.transpImage = Image.open(img, "r")
+        else:
+            self.transpName = None
+            self.transpImage = img
+        if self.transpImage.mode == "RGB":
+            self.transpImage = self.transpImage.convert(mode="L")
+        if self.transpImage.mode != "L":
+            raise ValueError("TranspImage is in wrong mode %s" % self.xorImage.mode)
+        if binarizeThreshold is not None:
+            self.transpImage = self.transpImage.point(lambda p: p > binarizeThreshold and 255)
+        return self.transpImage
+
+
 
 class CVImage(UtilObject):
     """
@@ -163,10 +291,15 @@ class CVImage(UtilObject):
     def __init__(self, image = None):
         self.cleanup()
         if isinstance(image, Image.Image):
-            self.data = (1./255.) * np.asarray(image,dtype=np.float32).reshape((image.size[1],image.size[0],3))
+            data = (1./255.) * np.asarray(image,dtype=np.float32).reshape((image.size[1],image.size[0],3))
 
         if isinstance(image, CVImage):
-            self.data = np.copy(image.data)
+            data = np.copy(image.data)
+
+        # Normalize
+        meanVal = np.mean(data, axis=(0,1))
+        stdVal = np.std(data, axis = (0,1)).clip(min=UtilNumpyClippingValue(np.float32))
+        self.data = np.multiply(data - meanVal, np.reciprocal(stdVal))
 
     def cleanup(self):
         self.fc = None
@@ -197,8 +330,8 @@ class CVImage(UtilObject):
     def gaussian(self, sigma):
         self.data = np.dstack([scipyFilters.gaussian_filter(self.data[:,:,i], sigma=sigma) for i in range(3)])
 
-    def image(self):
-        return Image.fromarray((self.data * 255.0).astype(dtype=np.uint8), mode = "RGB")
+    def image(self, imageName=None):
+        return UtilMatrixToImage(self.data, imageName=imageName, method = "direct")
 
     @staticmethod
     def weightRing(radius):
@@ -424,4 +557,23 @@ class CVImage(UtilObject):
             ret[:,radint+j,:,radint+i,:] = neibCells[:,:,k,:]
         ret = ret.reshape((shape[0]*size, shape[1], size, 3)).reshape((shape[0]*size, shape[1]*size, 3))
         return ret
+
+    def edge(self):
+        """
+        Use Sobel filters
+        :return: matrix (height, width) of detected edges
+        """
+        horFilt = np.array([[-1,0,1],[-2,0,2],[-1,0,1]], dtype=np.float32)
+        vertFilt = np.array([[-1,-2,-1],[0,0,0],[1,2,1]], dtype=np.float32)
+        horEdges = np.dstack([scipyFilters.convolve(self.data[:,:,i], horFilt) for i in range(3)])
+        vertEdges = np.dstack([scipyFilters.convolve(self.data[:,:,i], vertFilt) for i in range(3)])
+        horEdges = np.sum(horEdges * horEdges, axis=2)
+        vertEdges = np.sum(vertEdges * vertEdges, axis=2)
+        self.edges = np.sqrt(horEdges + vertEdges)
+        return UtilMatrixToImage(self.edges)
+
+    def meanSharpness(self):
+        h,w = self.edges.shape
+        return np.sum(self.edges) / (h*w)
+
 

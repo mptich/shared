@@ -264,29 +264,47 @@ def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
         if show:
             plt.show()
 
-def UtilStore(obj, fileName, progrIndPeriod = 10000):
+def UtilStorageFileType(fileName):
+    # By extension
+    fileType = None
     _, ext = os.path.splitext(fileName)
     if ext.lower() == ".json":
+        fileType = "JSON"
+    if ext.lower() == ".pck":
+        fileType = "PICKLE"
+    return fileType
+
+def UtilStore(obj, fileName, progrIndPeriod = 10000, fileType=None):
+    if fileType is None:
+        fileType = UtilStorageFileType(fileName)
+
+    if fileType == "JSON":
         json.dump(obj, open(fileName, 'wt'),
             cls = UtilJSONEncoderFactory(progrIndPeriod),
             sort_keys=True, indent=4, ensure_ascii = False)
         print("") # Next line
         return
-    if ext.lower() == ".pck":
+
+    if fileType == "PICKLE":
         pickle.dump(obj, open(fileName, 'wb'))
         return
+
     raise ValueError("Bad file name %s" % fileName)
 
-def UtilLoad(fileName, progrIndPeriod = 10000):
-    _, ext = os.path.splitext(fileName)
-    if ext.lower() == ".json":
+def UtilLoad(fileName, progrIndPeriod = 10000, fileType=None):
+    if fileType is None:
+        fileType = UtilStorageFileType(fileName)
+
+    if fileType == "JSON":
         obj = json.load(open(fileName, 'rt'),
             object_hook = UtilJsonDecoderFactory(progrIndPeriod))
         print("") # Next line
         return obj
-    if ext.lower() == ".pck":
+
+    if fileType == "PICKLE":
         obj = pickle.load(open(fileName, 'rb'))
         return obj
+
     raise ValueError("Bad file name %s" % fileName)
 
 def BivarPolynomialOffset(coefList, dx, dy):
