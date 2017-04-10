@@ -82,7 +82,7 @@ def UtilRemapImage(img, imgMap):
     # TODO: slow, write in tensor form
     for i in range(w):
         for j in range(h):
-            mj,mi=imgMap[j,i]
+            mj,mi=imgMap[j,i,:]
             if mono:
                 newArr[j][i] = f(mj,mi)
             else:
@@ -208,7 +208,7 @@ class ImageAnnot(UtilObject):
             self.name = img
             self.image = Image.open(img, "r")
         else:
-            self.name = None
+            self.name = "PIL IMAGE"
             self.image = img
         assert self.image.mode == "RGB"
         self.size = self.image.size
@@ -239,7 +239,7 @@ class ImageAnnot(UtilObject):
     def addAnnotPoint(self, x, y, size = 1, color = (0,0,0)):
         if (x < 0) or (x > self.size[0]-1) or \
                 (y < 0) or (y > self.size[1]-1):
-            raise ValueError("%d,%d is outside of image size %s" % (x,y,self.size))
+            raise ValueError("%s: %d,%d is outside of image size %s" % (self.name,x,y,self.size))
         upperLeftMarg = min(x, y, size)
         upperRightMarg = min(self.size[0]-1-x, y, size)
         lowerRightMarg = min(self.size[0]-1-x, self.size[1]-1-y, size)

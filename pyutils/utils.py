@@ -84,8 +84,12 @@ class UtilCaller(UtilObject):
         d.update(kwargs)
         return self.func(*(self.args + args), **d)
 
+def UtilIdentity(*args):
+    if len(args) == 1:
+        return args[0]
+    return args
 
-def UtilJSONEncoderFactory(progrIndPeriod = 10000):
+def UtilJSONEncoderFactory(progrIndPeriod = 10000, retList = None):
 
     class UtilJSONEncoder(json.JSONEncoder):
         """
@@ -93,6 +97,11 @@ def UtilJSONEncoderFactory(progrIndPeriod = 10000):
         from UtilObject, into an object that can be decoded
         using the GenomeJSONDecoder.
         """
+
+        progrIndCounter = [0]
+        if retList is not None:
+            retList.append(progrIntCounter)
+
         def __init__(self, *args, **kwargs):
             super(UtilJSONEncoder, self).__init__(*args, **kwargs)
             self.progrIndCount = 0
@@ -101,6 +110,7 @@ def UtilJSONEncoderFactory(progrIndPeriod = 10000):
             self.progrIndCount += 1
             if self.progrIndCount % progrIndPeriod == 0:
                 print ("\rProgress %u" % self.progrIndCount),
+                progrIndCounter[0] += 1
 
             # First see if there is an alternative method to represent the
             # class
@@ -131,8 +141,12 @@ def UtilJSONEncoderFactory(progrIndPeriod = 10000):
 # This is optimization - caching imported classes
 importedClassesDict = {}
 
-def UtilJsonDecoderFactory(progrIndPeriod = 10000):
+def UtilJsonDecoderFactory(progrIndPeriod = 10000, retList = None):
     progrIndCount = [0]
+    progrIndCounter = [0]
+
+    if retList is not None:
+        retList.append(progrIndCounter)
 
     def UtilJSONDecoderDictToObj(d):
         if UtilObjectKey in d:
@@ -154,6 +168,7 @@ def UtilJsonDecoderFactory(progrIndPeriod = 10000):
         progrIndCount[0] += 1
         if progrIndCount[0] % progrIndPeriod == 0:
             print ("\rProgress %u" % progrIndCount[0]),
+            progrIndCounter[0] += 1
         return inst
 
     return UtilJSONDecoderDictToObj
@@ -279,10 +294,12 @@ def UtilStore(obj, fileName, progrIndPeriod = 10000, fileType=None):
         fileType = UtilStorageFileType(fileName)
 
     if fileType == "JSON":
+        ctrList = []
         json.dump(obj, open(fileName, 'wt'),
-            cls = UtilJSONEncoderFactory(progrIndPeriod),
+            cls = UtilJSONEncoderFactory(progrIndPeriod, retList = ctrList),
             sort_keys=True, indent=4, ensure_ascii = False)
-        print("") # Next line
+        if ctrList[0][0] > 0:
+            print("") # Next line
         return
 
     if fileType == "PICKLE":
@@ -296,9 +313,11 @@ def UtilLoad(fileName, progrIndPeriod = 10000, fileType=None):
         fileType = UtilStorageFileType(fileName)
 
     if fileType == "JSON":
+        ctrList = []
         obj = json.load(open(fileName, 'rt'),
-            object_hook = UtilJsonDecoderFactory(progrIndPeriod))
-        print("") # Next line
+            object_hook = UtilJsonDecoderFactory(progrIndPeriod=progrIndPeriod, retList=ctrList))
+        if ctrList[0][0] > 0:
+            print("") # Next line
         return obj
 
     if fileType == "PICKLE":
