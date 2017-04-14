@@ -365,7 +365,7 @@ def BivarPolynomialOffset(coefList, dx, dy):
 # It is expensive first time, so implement it as a function
 def UtilNumpyClippingValue(dtype):
     info = np.finfo(dtype=dtype)
-    return info.eps * 10.
+    return info.tiny * 10.
 
 
 # Wrapper for primitive values, so they can be returned as
