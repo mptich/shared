@@ -14,7 +14,9 @@ from sklearn import linear_model
 import gc
 import time
 import operator
+import collections
 import csv
+import cv2
 
 
 def UtilStitchImagesHor(imgNameList, outImageName):
@@ -68,47 +70,28 @@ def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
     return Image.fromarray(imgDstArr.astype(np.uint8))
 
 def UtilRemapImage(img, imgMap):
-    w,h = img.size
-    imgArr = np.asarray(img, dtype=np.float32)
+    h = img.shape[0]
+    w = img.shape[1]
+    imgArr = img.astype(np.float32)
+    #TODO: slow, replaceinterp2d  with RectBivariateSpline
     if len(imgArr.shape) == 3:
-        newArr = np.empty((h,w,3),dtype=np.float32)
         f = [interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr[:,:,i], 0, 1), fill_value=127.) \
              for i in range(3)]
+        f = [np.vectorize(func) for func in f]
         mono = False
     else:
-        newArr = np.empty((h,w), dtype=np.float32)
         f = interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr, 0, 1), fill_value=127.)
+        f = np.vectorize(f)
         mono = True
-    # TODO: slow, write in tensor form
-    for i in range(w):
-        for j in range(h):
-            mj,mi=imgMap[j,i,:]
-            if mono:
-                newArr[j][i] = f(mj,mi)
-            else:
-                newArr[j,i,:] = np.array([func(mj,mi) for func in f]).reshape((3,))
+    xArr, yArr = np.meshgrid(range(w), range(h))
+    imgCoord = imgMap[yArr.reshape(-1), xArr.reshape(-1)].reshape(h*w,2)
+    yImgCoord = imgCoord[:,0]
+    xImgCoord = imgCoord[:,1]
+    if mono:
+        newArr = f(yImgCoord, xImgCoord).reshape((h,w))
+    else:
+        newArr = np.dstack([func(yImgCoord, xImgCoord).reshape(h,w) for func in f])
     return Image.fromarray(newArr.clip(min=0., max=255.).astype(dtype=np.uint8))
-
-def UtilBoundingRectFromMask(mask):
-    arr = np.asarray(mask)
-    h,w = arr.shape
-    yMin=forwardCompat.maxint
-    yMax=-1
-    xMin=forwardCompat.maxint
-    xMax=-1
-    for i in range(w):
-        if np.max(arr[:,i]) > 0:
-            if xMin > i:
-                xMin = i
-            if xMax < i:
-                xMax = i
-    for j in range(h):
-        if np.max(arr[j,:]) > 0:
-            if yMin > j:
-                yMin = j
-            if yMax < j:
-                yMax = j
-    return (yMin, xMin, yMax, xMax)
 
 
 def UtilImageSimpleBlend(imgBg, imgFg):
@@ -575,5 +558,38 @@ class CVImage(UtilObject):
     def meanSharpness(self):
         h,w = self.edges.shape
         return np.sum(self.edges) / (h*w)
+
+
+class BoundingBox(UtilObject):
+    def __init__(self, image=None):
+        self._rect = np.array([forwardCompat.maxint, forwardCompat.maxint, -1, -1])
+        if image is not None:
+            self.addMask(image)
+
+    def addMask(self, image):
+        if isinstance(image, str):
+            image = cv2.imread(image)
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+        if image.dtype != np.bool:
+            image = image > 128
+        ysWithPoints = np.any(image, axis=1)
+        xsWithPoints = np.any(image, axis=0)
+        xMin, xMax = np.where(ysWithPoints)[0][[0, -1]] + [0,1]
+        yMin, yMax = np.where(xsWithPoints)[0][[0, -1]] + [0,1]
+        self.accomodate([yMin, xMin, yMax, xMax])
+
+    def addPoint(self, yCoord, xCoord):
+        self.accomodate([yCoord, xCoord, yCoord+1, xCoord+1])
+
+    def accomodate(self, updateRect):
+         updateRect = np.array(updateRect).astype(np.int)
+         self._rect[:2] = np.where(self._rect[:2] > updateRect[:2], updateRect[:2], self._rect[:2])
+         self._rect[2:] = np.where(self._rect[2:] < updateRect[2:], updateRect[2:], self._rect[2:])
+
+    @property
+    def rect(self):
+        return tuple(self._rect)
+
 
 

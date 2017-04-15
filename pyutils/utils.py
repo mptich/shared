@@ -90,6 +90,9 @@ def UtilIdentity(*args):
     return args
 
 def UtilJSONEncoderFactory(progrIndPeriod = 10000, retList = None):
+    progrIndCounter = [0]
+    if retList is not None:
+        retList.append(progrIndCounter)
 
     class UtilJSONEncoder(json.JSONEncoder):
         """
@@ -97,10 +100,6 @@ def UtilJSONEncoderFactory(progrIndPeriod = 10000, retList = None):
         from UtilObject, into an object that can be decoded
         using the GenomeJSONDecoder.
         """
-
-        progrIndCounter = [0]
-        if retList is not None:
-            retList.append(progrIntCounter)
 
         def __init__(self, *args, **kwargs):
             super(UtilJSONEncoder, self).__init__(*args, **kwargs)
