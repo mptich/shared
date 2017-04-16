@@ -8,6 +8,7 @@ from PIL import ImageChops
 from PIL import ImageFilter
 import scipy.ndimage.filters as scipyFilters
 from scipy import interpolate
+import scipy
 import math
 import sys
 from sklearn import linear_model
@@ -18,6 +19,42 @@ import collections
 import csv
 import cv2
 
+def UtilImageToArray(fileName):
+    img = cv2.imread(fileName)
+    if (len(img.shape) == 3) and (img.shape[2] == 3):
+        return np.dstack([img[:, :, 2], img[:, :, 1], img[:, :, 0]])
+    else:
+        return img
+
+def UtilArrayToImage(arr, fileName):
+    if (len(arr.shape) == 3) and (arr.shape[2] == 3):
+        arr = np.dstack([arr[:, :, 2], arr[:, :, 1], arr[:, :, 0]])
+    cv2.imwrite(fileName, arr)
+
+def UtilImageResize(img, destHeight, destWidth):
+    """
+    It uses PIL algorithms. So we have to use gaussian
+    :param img: input image
+    :param destHeight: target height
+    :param destWidth: target width
+    :return:
+    """
+    h, w = img.shape[:2]
+    depth = None
+    if len(img.shape) == 3:
+        depth = img.shape[2]
+    def gaussianCalc(srcSize, destSize):
+        if destSize >= srcSize:
+            return 0.2
+        return 0.7 * srcSize / destSize
+    ySigma = gaussianCalc(h,destHeight)
+    xSigma = gaussianCalc(w,destWidth)
+    if depth is None:
+        img = scipyFilters.gaussian_filter(img, (ySigma, xSigma))
+    else:
+        img = np.dstack([scipyFilters.gaussian_filter(img[:,:,i], (ySigma, xSigma)) for i in range(depth)])
+    img = scipy.misc.imresize(img, (destHeight, destWidth))
+    return img
 
 def UtilStitchImagesHor(imgNameList, outImageName):
     imgList = []
