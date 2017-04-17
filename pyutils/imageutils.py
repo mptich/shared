@@ -19,17 +19,24 @@ import collections
 import csv
 import cv2
 
-def UtilImageToArray(fileName):
+def UtilImageFileToArray(fileName):
     img = cv2.imread(fileName)
     if (len(img.shape) == 3) and (img.shape[2] == 3):
-        return np.dstack([img[:, :, 2], img[:, :, 1], img[:, :, 0]])
-    else:
-        return img
+        img = np.flip(img, axis=2)
+    return img
 
-def UtilArrayToImage(arr, fileName):
+def UtilArrayToImageFile(arr, fileName):
     if (len(arr.shape) == 3) and (arr.shape[2] == 3):
-        arr = np.dstack([arr[:, :, 2], arr[:, :, 1], arr[:, :, 0]])
+        arr = np.flip(arr, axis=2)
     cv2.imwrite(fileName, arr)
+
+def UtilFromRgbToGray(img):
+    img = np.flip(img, axis=2)
+    return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+
+def UtilFromGrayToRgb(img):
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    return np.flip(img, axis=2)
 
 def UtilImageResize(img, destHeight, destWidth):
     """
@@ -46,7 +53,7 @@ def UtilImageResize(img, destHeight, destWidth):
     def gaussianCalc(srcSize, destSize):
         if destSize >= srcSize:
             return 0.2
-        return 0.7 * srcSize / destSize
+        return 0.4 * srcSize / destSize
     ySigma = gaussianCalc(h,destHeight)
     xSigma = gaussianCalc(w,destWidth)
     if depth is None:
@@ -109,6 +116,7 @@ def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
 def UtilRemapImage(img, imgMap):
     h = img.shape[0]
     w = img.shape[1]
+    assert imgMap.shape[:2] == (h,w)
     imgArr = img.astype(np.float32)
     #TODO: slow, replaceinterp2d  with RectBivariateSpline
     if len(imgArr.shape) == 3:
@@ -128,6 +136,7 @@ def UtilRemapImage(img, imgMap):
         newArr = f(yImgCoord, xImgCoord).reshape((h,w))
     else:
         newArr = np.dstack([func(yImgCoord, xImgCoord).reshape(h,w) for func in f])
+    assert newArr.shape[:2] == (h,w)
     return Image.fromarray(newArr.clip(min=0., max=255.).astype(dtype=np.uint8))
 
 
@@ -605,15 +614,15 @@ class BoundingBox(UtilObject):
 
     def addMask(self, image):
         if isinstance(image, str):
-            image = cv2.imread(image)
+            image = UtilImageFileToArray()
         if len(image.shape) == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+            image = UtilFromRgbToGray(image)
         if image.dtype != np.bool:
             image = image > 128
         ysWithPoints = np.any(image, axis=1)
         xsWithPoints = np.any(image, axis=0)
-        xMin, xMax = np.where(ysWithPoints)[0][[0, -1]] + [0,1]
-        yMin, yMax = np.where(xsWithPoints)[0][[0, -1]] + [0,1]
+        yMin, yMax = np.where(ysWithPoints)[0][[0, -1]] + [0,1]
+        xMin, xMax = np.where(xsWithPoints)[0][[0, -1]] + [0,1]
         self.accomodate([yMin, xMin, yMax, xMax])
 
     def addPoint(self, yCoord, xCoord):

@@ -10,6 +10,8 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
+import tempfile
+import csv
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -372,5 +374,42 @@ def UtilNumpyClippingValue(dtype):
 class UtilWrapper:
     def __init__(self, val):
         self.value = val
+
+class UtilMultiCsvWriter(UtilObject):
+    """
+    This class distributes multiple CSV writes among several files, so they can be eventually
+    passed to different processes
+    """
+    def __init__(self, fileCount, dir=None):
+        self.fhs = []
+        self.fds = []
+        self.fileNames = []
+        self.cws = []
+        for i in range(fileCount):
+            fd, fileName = tempfile.mkstemp(prefix="UtilMultiCsvWriter_", dir=dir, text=True)
+            self.fds.append(fd)
+            self.fileNames.append(fileName)
+            fh = open(fileName, 'w')
+            csvw = csv.writer(fh)
+            self.cws.append(csvw)
+            self.fhs.append(fh)
+        self.count = fileCount
+        self.counter = 0
+
+    def record(self, l):
+        self.cws[self.counter].writerow(l)
+        self.counter = (self.counter + 1) % self.count
+
+    def finish(self):
+        """
+        :return: list of created file names
+        """
+        for fh in self.fhs:
+            fh.close()
+        for fd in self.fds:
+            os.close(fd)
+        return self.fileNames
+
+
 
 
