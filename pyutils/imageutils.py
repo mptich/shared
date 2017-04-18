@@ -38,6 +38,17 @@ def UtilFromGrayToRgb(img):
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     return np.flip(img, axis=2)
 
+def UtilIsValidImageArray(arr):
+    assert isinstance(arr, np.ndarray)
+    if (arr.type != np.int) or (arr.type != np.uint8):
+        return False
+    if np.any(arr > 255) or np.any(arr < 0):
+        return False
+    if len(arr.shape) != 2:
+        if (len(arr.shape) != 3) or (arr.shape[2] != 3):
+            return False
+    return True
+
 def UtilImageResize(img, destHeight, destWidth):
     """
     It uses PIL algorithms. So we have to use gaussian
@@ -85,9 +96,13 @@ def UtilStitchImagesHor(imgNameList, outImageName):
     result.save(outImageName)
 
 def UtilImageEdge(img):
+    # TODO: let's not use PIL for that
     if isinstance(img, str):
         img = Image.open(img, "r")
-    return img.filter(ImageFilter.FIND_EDGES)
+    else:
+        assert isinstance(img, np.ndarray)
+        img = Image.fromarray(img)
+    return np.array(img.filter(ImageFilter.FIND_EDGES))
 
 def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
     """
@@ -111,7 +126,7 @@ def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
             maxVal = np.max(imgDstArr[j,i,:].clip(min=1.0))
             rMax = 255. / maxVal
             imgDstArr[j,i,:] *= rMax * math.tanh(r/rMax)
-    return Image.fromarray(imgDstArr.astype(np.uint8))
+    return imgDstArr.astype(np.uint8).clip(min=0, max=255)
 
 def UtilRemapImage(img, imgMap):
     h = img.shape[0]
@@ -137,7 +152,7 @@ def UtilRemapImage(img, imgMap):
     else:
         newArr = np.dstack([func(yImgCoord, xImgCoord).reshape(h,w) for func in f])
     assert newArr.shape[:2] == (h,w)
-    return Image.fromarray(newArr.clip(min=0., max=255.).astype(dtype=np.uint8))
+    return newArr.astype(dtype=np.uint8).clip(min=0, max=255)
 
 
 def UtilImageSimpleBlend(imgBg, imgFg):
@@ -173,10 +188,17 @@ def UtilImageSimpleBlend(imgBg, imgFg):
             if adj:
                 imgCopy[j,i] *= 1. / r
     imgCopy = np.dstack([scipyFilters.gaussian_filter(imgCopy[:,:,i], sigma=0.5) for i in range(3)])
-    return Image.fromarray(imgCopy.astype(dtype=np.uint8), mode="RGB")
+    return imgCopy.astype(dtype=np.uint8).clip(min=0, max=255)
 
 
 def UtilMatrixToImage(mat, imageName = None, method = "direct"):
+    """
+    Mostly for debug purposes: convert "arbitrary" marix to an image array
+    :param mat: input matrix
+    :param imageName: file to save in, optional
+    :param method: "direct", "flat_hist"
+    :return:
+    """
     shape = np.shape(mat)
     if (len(shape) > 3) or (len(shape) < 2):
         raise ValueError("UtilMatrixToImage wrong shape %s" % repr(shape))
@@ -198,10 +220,9 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
         maxVal, minVal = (np.amax(temp, axis=(0,1)), np.amin(temp, axis=(0,1)))
         diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(np.float32))
         if count == 1:
-            img = Image.fromarray(((mat - minVal[0])* 255.0 / diff[0]).astype(dtype=np.uint8), mode="L")
+            img = ((mat - minVal[0])* 255.0 / diff[0]).astype(dtype=np.uint8)
         elif count == 3:
-            img = Image.fromarray(np.multiply((mat - minVal) * 255.0, np.reciprocal(diff)).astype(dtype=np.uint8), \
-                                  mode="RGB")
+            img = np.multiply((mat - minVal) * 255.0, np.reciprocal(diff)).astype(dtype=np.uint8)
         else:
             raise ValueError("No implemented")
     elif method == "flat_hist":
@@ -211,17 +232,19 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
             lBound = []
             for i in range(255):
                 lBound.append(l[length * i / 255])
-            img = Image.fromarray(np.searchsorted(lBound, mat).astype(dtype=np.uint8), mode="L")
+            img = np.searchsorted(lBound, mat).astype(dtype=np.uint8)
         elif (count == 3):
             images = [UtilMatrixToImage(mat[:,:,i], method=method) for i in range(count)]
-            img = Image.fromarray(np.dstack([np.asarray(images[i]) for i in range(count)]), mode="RGB")
+            img = np.dstack([images[i] for i in range(count)])
         else:
             raise ValueError("No implemented")
     else:
         raise ValueError("No implemented")
 
+    img = img.clip(min=0, max=255)
+
     if imageName is not None:
-        img.save(imageName)
+        UtilArrayToImageFile(img, imageName)
 
     return img
 
@@ -229,7 +252,8 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
 
 class ImageAnnot(UtilObject):
     """
-    Class that wraps image to efficiently add annotations
+    Class that wraps image to efficiently add annotations.
+    Internally, it uses PIL Image representation
     """
 
     def __init__(self, img):
@@ -237,9 +261,10 @@ class ImageAnnot(UtilObject):
             self.name = img
             self.image = Image.open(img, "r")
         else:
-            self.name = "PIL IMAGE"
-            self.image = img
-        assert self.image.mode == "RGB"
+            assert isinstance(img, np.ndarray)
+            self.name = "ARRAY"
+            self.image = Image.fromarray(img, mode="RGB")
+        assert img.shape[2] == 3
         self.size = self.image.size
         self.clear()
 
@@ -263,7 +288,7 @@ class ImageAnnot(UtilObject):
                 np.expand_dims(np.asarray(self.transpImage), axis=2)], axis=2), mode="RGBA")
         if outImgName is not None:
             image.save(outImgName)
-        return image
+        return np.array(image)
 
     def addAnnotPoint(self, x, y, size = 1, color = (0,0,0)):
         if (x < 0) or (x > self.size[0]-1) or \
@@ -288,8 +313,9 @@ class ImageAnnot(UtilObject):
             self.xorName = img
             self.xorImage = Image.open(img, "r")
         else:
+            assert isinstance(img, np.ndarray)
             self.xorName = None
-            self.xorImage = img
+            self.xorImage = Image.fromarray(img)
         if self.xorImage.mode == "RGB":
             self.xorImage = self.xorImage.convert(mode="L")
         if self.xorImage.mode != "L":
@@ -300,15 +326,16 @@ class ImageAnnot(UtilObject):
             self.transpName = img
             self.transpImage = Image.open(img, "r")
         else:
+            assert isinstance(img, np.ndarray)
             self.transpName = None
-            self.transpImage = img
+            self.transpImage = Image.fromarray(img)
         if self.transpImage.mode == "RGB":
             self.transpImage = self.transpImage.convert(mode="L")
         if self.transpImage.mode != "L":
             raise ValueError("TranspImage is in wrong mode %s" % self.xorImage.mode)
         if binarizeThreshold is not None:
             self.transpImage = self.transpImage.point(lambda p: p > binarizeThreshold and 255)
-        return self.transpImage
+        return np.array(self.transpImage)
 
 
 
@@ -317,13 +344,12 @@ class CVImage(UtilObject):
     Image in the format convenient for CV processing
     """
 
-    def __init__(self, image = None):
+    def __init__(self, image):
         self.cleanup()
-        if isinstance(image, Image.Image):
-            data = (1./255.) * np.asarray(image,dtype=np.float32).reshape((image.size[1],image.size[0],3))
-
         if isinstance(image, CVImage):
             data = np.copy(image.data)
+        else:
+            assert isinstance(image, np.ndarray)
 
         # Normalize
         meanVal = np.mean(data, axis=(0,1))
@@ -353,8 +379,7 @@ class CVImage(UtilObject):
         img = self.image()
         newSize = (int(h/times), int(w/times)) # This order for scipy
         data = scipy.misc.imresize(img, newSize, interp="lanczos", mode="RGB")
-        img = Image.fromarray(data, mode="RGB")
-        self.__init__(image=img)
+        self.__init__(image=data)
 
     def gaussian(self, sigma):
         self.data = np.dstack([scipyFilters.gaussian_filter(self.data[:,:,i], sigma=sigma) for i in range(3)])
