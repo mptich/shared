@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
 import tempfile
 import csv
+import subprocess
+import errno
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -377,6 +379,50 @@ def UtilCartesianMarix(arr1, arr2):
 def UtilNumpyClippingValue(dtype):
     info = np.finfo(dtype=dtype)
     return info.tiny * 10.
+
+
+def UtilFanMultiProcess(listProc, logFilePrefix=None):
+    """
+    Launches prcesses listed in listProc
+    :param listProc: list of process command lines
+    :param logFilePrefix: prefix of teh log file; an ordinal is added to it, then ".txt"
+    :return: list of exit codes
+    """
+    pList = []
+    fLogList = []
+    for index,pName in enumerate(listProc):
+        fLog = None
+        if logFilePrefix is not None:
+            logFileName = logFilePrefix + ("%05d" % index) + ".txt"
+            fLog = open(logFileName, "w")
+            fLogList.append(fLog)
+        logFile = fLog if fLog is not None else subprocess.PIP
+        pList.append(subprocess.Popen(pName, shell=True, universal_newlines=True, \
+                                      stdout=logFile, stderr=logFile))
+
+    # Wait for all child processes to finish
+    exitCodes = [p.wait() for p in pList]
+    if logFilePrefix is not None:
+        for fLog in fLogList:
+            fLog.flush()
+            fLog.close()
+    return exitCodes
+
+def UtilSafeMkdir(dirName):
+    """
+    If several processes are trying to create a directory simultaneously, it might cause a race condition.
+    :param dirName: Directory that should be created if it does not exist
+    :return: True if directory has been created, False othewise
+    """
+    ret = False
+    try:
+        if not os.path.exists(dirName):
+            os.mkdir(dirName)
+            ret = True
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+    return ret
 
 
 # Wrapper for primitive values, so they can be returned as

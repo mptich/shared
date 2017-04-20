@@ -264,7 +264,7 @@ class ImageAnnot(UtilObject):
             assert isinstance(img, np.ndarray)
             self.name = "ARRAY"
             self.image = Image.fromarray(img, mode="RGB")
-        assert img.shape[2] == 3
+        assert self.image.mode == "RGB"
         self.size = self.image.size
         self.clear()
 
@@ -316,7 +316,7 @@ class ImageAnnot(UtilObject):
             assert isinstance(img, np.ndarray)
             self.xorName = None
             self.xorImage = Image.fromarray(img)
-        if self.xorImage.mode == "RGB":
+        if (self.xorImage.mode == "RGB") or (self.xorImage.mode == "RGBA"):
             self.xorImage = self.xorImage.convert(mode="L")
         if self.xorImage.mode != "L":
             raise ValueError("XorImage is in wrong mode %s" % self.xorImage.mode)
@@ -329,7 +329,7 @@ class ImageAnnot(UtilObject):
             assert isinstance(img, np.ndarray)
             self.transpName = None
             self.transpImage = Image.fromarray(img)
-        if self.transpImage.mode == "RGB":
+        if (self.transpImage.mode == "RGB") or (self.transpImage.mode == "RGBA"):
             self.transpImage = self.transpImage.convert(mode="L")
         if self.transpImage.mode != "L":
             raise ValueError("TranspImage is in wrong mode %s" % self.xorImage.mode)
