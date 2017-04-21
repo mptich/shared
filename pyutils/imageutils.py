@@ -133,7 +133,7 @@ def UtilRemapImage(img, imgMap):
     w = img.shape[1]
     assert imgMap.shape[:2] == (h,w)
     imgArr = img.astype(np.float32)
-    #TODO: slow, replaceinterp2d  with RectBivariateSpline
+    #TODO: slow, replace interp2d  with RectBivariateSpline
     if len(imgArr.shape) == 3:
         f = [interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr[:,:,i], 0, 1), fill_value=127.) \
              for i in range(3)]
