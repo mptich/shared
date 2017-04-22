@@ -452,6 +452,9 @@ class UtilMultiCsvWriter(UtilObject):
         self.count = fileCount
         self.counter = 0
 
+    def getFileNames(self):
+        return self.fileNames
+
     def record(self, l):
         self.cws[self.counter].writerow(l)
         self.counter = (self.counter + 1) % self.count
