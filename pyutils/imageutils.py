@@ -19,6 +19,10 @@ import collections
 import csv
 import cv2
 
+scipyVerMaj, scipyVerMin, _ = scipy.__version__.split(".")
+if (int(scipyVerMaj) == 0) and (int(scipyVerMin) < 14):
+    raise Exception("SCIPY version %s, should be at least 0.14.0" % scipy.__version__)
+
 def UtilImageFileToArray(fileName):
     img = cv2.imread(fileName)
     if (len(img.shape) == 3) and (img.shape[2] == 3):
@@ -128,32 +132,42 @@ def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
             imgDstArr[j,i,:] *= rMax * math.tanh(r/rMax)
     return imgDstArr.astype(np.uint8).clip(min=0, max=255)
 
-def UtilRemapImage(img, imgMap):
+
+def UtilRemapImage(img, map, fillValue=127.):
+    """
+    Mapping image geometrically
+    :param img: input image
+    :param map: input map
+    :return: new mapped image
+    """
     h = img.shape[0]
     w = img.shape[1]
-    assert imgMap.shape[:2] == (h,w)
+    logicMap = np.logical_and(map[:,:,0] <= float(h-1), map[:,:,1] <= float(w-1))
+    logicMap = np.logical_and(logicMap, map[:,:,0] > 0.)
+    logicMap = np.logical_and(logicMap, map[:,:,1] > 0.)
+    assert map.shape[:2] == (h,w)
+    assert logicMap.shape == (h,w)
     imgArr = img.astype(np.float32)
-    #TODO: slow, replace interp2d  with RectBivariateSpline
     if len(imgArr.shape) == 3:
-        f = [interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr[:,:,i], 0, 1), fill_value=127.) \
-             for i in range(3)]
-        f = [np.vectorize(func) for func in f]
+        f = [interpolate.RectBivariateSpline(range(h), range(w), imgArr[:,:,i]) for i in range(3)]
         mono = False
     else:
-        f = interpolate.interp2d(range(h), range(w), np.swapaxes(imgArr, 0, 1), fill_value=127.)
-        f = np.vectorize(f)
+        f = interpolate.RectBivariateSpline(range(h), range(w), imgArr, fill_value=127.)
         mono = True
-    xArr, yArr = np.meshgrid(range(w), range(h))
-    imgCoord = imgMap[yArr.reshape(-1), xArr.reshape(-1)].reshape(h*w,2)
-    yImgCoord = imgCoord[:,0]
-    xImgCoord = imgCoord[:,1]
+    yFlat = np.repeat(np.array(range(h)), w)
+    xFlat = np.tile(np.array(range(w)), h)
+    remap = map[yFlat, xFlat]
+    assert remap.shape == (h * w, 2)
+    yImgCoord = remap[:,0]
+    xImgCoord = remap[:,1]
     if mono:
-        newArr = f(yImgCoord, xImgCoord).reshape((h,w))
+        newArr = f(yImgCoord, xImgCoord, grid=False).reshape((h,w))
+        newArr = np.where(logicMap, newArr, fillValue)
     else:
-        newArr = np.dstack([func(yImgCoord, xImgCoord).reshape(h,w) for func in f])
+        newArr = [func(yImgCoord, xImgCoord, grid=False).reshape(h,w) for func in f]
+        newArr = np.dstack([np.where(logicMap, arr, fillValue) for arr in newArr])
     assert newArr.shape[:2] == (h,w)
     return newArr.astype(dtype=np.uint8).clip(min=0, max=255)
-
 
 def UtilImageSimpleBlend(imgBg, imgFg):
     """
