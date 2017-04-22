@@ -451,6 +451,7 @@ class UtilMultiCsvWriter(UtilObject):
             self.fhs.append(fh)
         self.count = fileCount
         self.counter = 0
+        self.active = True
 
     def getFileNames(self):
         return self.fileNames
@@ -463,10 +464,12 @@ class UtilMultiCsvWriter(UtilObject):
         """
         :return: list of created file names
         """
-        for fh in self.fhs:
-            fh.close()
-        for fd in self.fds:
-            os.close(fd)
+        if self.active:
+            for fh in self.fhs:
+                fh.close()
+            for fd in self.fds:
+                os.close(fd)
+            self.active = False
         return self.fileNames
 
 
