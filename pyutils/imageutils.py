@@ -133,7 +133,7 @@ def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
     return imgDstArr.astype(np.uint8).clip(min=0, max=255)
 
 
-def UtilRemapImage(img, map, fillValue=127.):
+def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
     """
     Mapping image geometrically
     :param img: input image
@@ -149,10 +149,10 @@ def UtilRemapImage(img, map, fillValue=127.):
     assert logicMap.shape == (h,w)
     imgArr = img.astype(np.float32)
     if len(imgArr.shape) == 3:
-        f = [interpolate.RectBivariateSpline(range(h), range(w), imgArr[:,:,i]) for i in range(3)]
+        f = [interpolate.RectBivariateSpline(range(h), range(w), imgArr[:,:,i], ky=ky, kx=kx) for i in range(3)]
         mono = False
     else:
-        f = interpolate.RectBivariateSpline(range(h), range(w), imgArr, fill_value=127.)
+        f = interpolate.RectBivariateSpline(range(h), range(w), imgArr, ky=ky, kx=kx)
         mono = True
     yFlat = np.repeat(np.array(range(h)), w)
     xFlat = np.tile(np.array(range(w)), h)
