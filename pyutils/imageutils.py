@@ -27,9 +27,10 @@ def UtilImageFileToArray(fileName):
     img = cv2.imread(fileName)
     if (len(img.shape) == 3) and (img.shape[2] == 3):
         img = np.flip(img, axis=2)
-    return img
+    return UtilImageToFloat(img)
 
 def UtilArrayToImageFile(arr, fileName):
+    arr = UtilImageToInt(arr)
     if (len(arr.shape) == 3) and (arr.shape[2] == 3):
         arr = np.flip(arr, axis=2)
     cv2.imwrite(fileName, arr)
@@ -42,18 +43,18 @@ def UtilFromGrayToRgb(img):
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     return np.flip(img, axis=2)
 
-def UtilIsValidImageArray(arr):
-    assert isinstance(arr, np.ndarray)
-    if (arr.type != np.int) or (arr.type != np.uint8):
-        return False
-    if np.any(arr > 255) or np.any(arr < 0):
-        return False
-    if len(arr.shape) != 2:
-        if (len(arr.shape) != 3) or (arr.shape[2] != 3):
-            return False
-    return True
+def UtilImageToInt(img):
+    return (img + 0.5).astype(np.int).clip(min=0, max=255)
 
-def UtilImageResize(img, destHeight, destWidth):
+def UtilImageToUint8(img):
+    # Required by PIL Image.fromarray
+    return UtilImageToInt(img).astype(np.uint8)
+
+def UtilImageToFloat(img):
+    return img.astype(np.float32)
+
+
+def UtilImageResize(img, destHeight, destWidth, applyGauss=True):
     """
     It uses PIL algorithms. So we have to use gaussian
     :param img: input image
@@ -71,10 +72,11 @@ def UtilImageResize(img, destHeight, destWidth):
         return 0.4 * srcSize / destSize
     ySigma = gaussianCalc(h,destHeight)
     xSigma = gaussianCalc(w,destWidth)
-    if depth is None:
-        img = scipyFilters.gaussian_filter(img, (ySigma, xSigma))
-    else:
-        img = np.dstack([scipyFilters.gaussian_filter(img[:,:,i], (ySigma, xSigma)) for i in range(depth)])
+    if applyGauss:
+        if depth is None:
+            img = scipyFilters.gaussian_filter(img, (ySigma, xSigma))
+        else:
+            img = np.dstack([scipyFilters.gaussian_filter(img[:,:,i], (ySigma, xSigma)) for i in range(depth)])
     img = scipy.misc.imresize(img, (destHeight, destWidth))
     return img
 
@@ -107,30 +109,6 @@ def UtilImageEdge(img):
         assert isinstance(img, np.ndarray)
         img = Image.fromarray(img)
     return np.array(img.filter(ImageFilter.FIND_EDGES))
-
-def UtilImageEqualizeBrightness(imgDst, imgSrc, kernelSize):
-    """
-    Makes brightness of imgDst equal to the brightness of imgSrc, averaged over gaussian kernel
-    :param imgDst: destination image
-    :param imgSrc: source image
-    :param kernelSize: size of the gaussian Kernel
-    :return: image with equalized brightness
-    """
-    brDst = imgDst.convert(mode="L")
-    brSrc = imgSrc.convert(mode="L")
-    brDstArr = scipyFilters.gaussian_filter(np.array(brDst, dtype=np.float32), sigma=kernelSize).clip(min=1.0)
-    brSrcArr = scipyFilters.gaussian_filter(np.array(brSrc, dtype=np.float32), sigma=kernelSize).clip(min=1.0)
-    ratio = brSrcArr * np.reciprocal(brDstArr)
-    imgDstArr = np.array(imgDst, dtype=np.float32)
-    h,w,_ = imgDstArr.shape
-    # TODO: change to tensor operations
-    for i in range(w):
-        for j in range(h):
-            r = ratio[j,i]
-            maxVal = np.max(imgDstArr[j,i,:].clip(min=1.0))
-            rMax = 255. / maxVal
-            imgDstArr[j,i,:] *= rMax * math.tanh(r/rMax)
-    return imgDstArr.astype(np.uint8).clip(min=0, max=255)
 
 
 def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
@@ -167,42 +145,7 @@ def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
         newArr = [func(yImgCoord, xImgCoord, grid=False).reshape(h,w) for func in f]
         newArr = np.dstack([np.where(logicMap, arr, fillValue) for arr in newArr])
     assert newArr.shape[:2] == (h,w)
-    return newArr.astype(dtype=np.uint8).clip(min=0, max=255)
-
-def UtilImageSimpleBlend(imgBg, imgFg):
-    """
-    Preliminary blending, does not depend on the quality of the original images. Minimum blurring
-    :param imgBg: Background image, RGB
-    :param imgFg: Foreground image, RGBA
-    :return: Blended image
-    """
-    img = imgBg.copy()
-    img.paste(imgFg, (0,0), imgFg)
-    w,h = img.size
-    mask = np.asarray(imgFg)[:,:,3]
-    imgCopy = np.array(img, dtype=np.float32)
-    imgOrig = np.asarray(img)
-    # temporary - let's use a loop
-    for i in range(1,w-1):
-        for j in range(1,h-1):
-            adj = False
-            for di in range(-1,2):
-                for dj in range(-1,2):
-                    if (di,dj) == (0,0):
-                        continue
-                    jj=j+dj
-                    ii=i+di
-                    if mask[j,i] < mask[jj,ii]:
-                        if adj == False:
-                            adj = True
-                            r = 1.0
-                        t = np.random.uniform(0.2, 0.5)
-                        r += t
-                        imgCopy[j,i] += imgOrig[jj,ii] * t
-            if adj:
-                imgCopy[j,i] *= 1. / r
-    imgCopy = np.dstack([scipyFilters.gaussian_filter(imgCopy[:,:,i], sigma=0.5) for i in range(3)])
-    return imgCopy.astype(dtype=np.uint8).clip(min=0, max=255)
+    return newArr.clip(min=0., max=255.)
 
 
 def UtilMatrixToImage(mat, imageName = None, method = "direct"):
@@ -234,9 +177,9 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
         maxVal, minVal = (np.amax(temp, axis=(0,1)), np.amin(temp, axis=(0,1)))
         diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(np.float32))
         if count == 1:
-            img = ((mat - minVal[0])* 255.0 / diff[0]).astype(dtype=np.uint8)
+            img = (mat - minVal[0])* 255.0 / diff[0]
         elif count == 3:
-            img = np.multiply((mat - minVal) * 255.0, np.reciprocal(diff)).astype(dtype=np.uint8)
+            img = np.multiply((mat - minVal) * 255.0, np.reciprocal(diff))
         else:
             raise ValueError("No implemented")
     elif method == "flat_hist":
@@ -246,7 +189,7 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
             lBound = []
             for i in range(255):
                 lBound.append(l[length * i / 255])
-            img = np.searchsorted(lBound, mat).astype(dtype=np.uint8)
+            img = np.searchsorted(lBound, mat)
         elif (count == 3):
             images = [UtilMatrixToImage(mat[:,:,i], method=method) for i in range(count)]
             img = np.dstack([images[i] for i in range(count)])
@@ -255,7 +198,7 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
     else:
         raise ValueError("No implemented")
 
-    img = img.clip(min=0, max=255)
+    img = img.clip(min=0., max=255.)
 
     if imageName is not None:
         UtilArrayToImageFile(img, imageName)
