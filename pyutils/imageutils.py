@@ -247,7 +247,17 @@ class ImageAnnot(UtilObject):
             image.save(outImgName)
         return np.array(image)
 
-    def addAnnotPoint(self, x, y, size = 1, color = (0,0,0)):
+    @staticmethod
+    def convertToGray(pilImg):
+        if (pilImg.mode == "P"):
+            pilImg = pilImg.convert(mode="RGB")
+        if (pilImg.mode == "RGB") or (pilImg.mode == "RGBA"):
+            pilImg = pilImg.convert(mode="L")
+        if pilImg.mode != "L":
+            raise ValueError("TranspImage is in wrong mode %s" % pilImg.mode)
+        return pilImg
+
+    def addAnnotPoint(self, x, y, size = 2, color = (0,0,0)):
         if (x < 0) or (x > self.size[0]-1) or \
                 (y < 0) or (y > self.size[1]-1):
             raise ValueError("%s: %d,%d is outside of image size %s" % (self.name,x,y,self.size))
@@ -265,6 +275,13 @@ class ImageAnnot(UtilObject):
         imgDraw.line([lowerLeft, upperRight], fill=color)
         imgDraw.line([upperLeft, lowerRight], fill=color)
 
+    def addDoubleAnnotPoint(self, x1, y1, x2, y2, size=2, color1=(0,255,0), color2=(255,0,0), colorLine=(0,0,0)):
+        self.addAnnotPoint(x1, y1, size, color1)
+        self.addAnnotPoint(x2, y2, size, color2)
+        assert self.overImage is not None
+        imgDraw = ImageDraw.Draw(self.overImage)
+        imgDraw.line([(x1,y1), (x2,y2)], fill=colorLine)
+
     def setXorMask(self, img):
         if isinstance(img, str):
             self.xorName = img
@@ -273,10 +290,7 @@ class ImageAnnot(UtilObject):
             assert isinstance(img, np.ndarray)
             self.xorName = None
             self.xorImage = Image.fromarray(img)
-        if (self.xorImage.mode == "RGB") or (self.xorImage.mode == "RGBA"):
-            self.xorImage = self.xorImage.convert(mode="L")
-        if self.xorImage.mode != "L":
-            raise ValueError("XorImage is in wrong mode %s" % self.xorImage.mode)
+        self.xorImage = self.convertToGray(self.xorImage)
 
     def setTransparencyMask(self, img, binarizeThreshold=None):
         if isinstance(img, str):
@@ -286,10 +300,7 @@ class ImageAnnot(UtilObject):
             assert isinstance(img, np.ndarray)
             self.transpName = None
             self.transpImage = Image.fromarray(img)
-        if (self.transpImage.mode == "RGB") or (self.transpImage.mode == "RGBA"):
-            self.transpImage = self.transpImage.convert(mode="L")
-        if self.transpImage.mode != "L":
-            raise ValueError("TranspImage is in wrong mode %s" % self.xorImage.mode)
+        self.transpImage = self.convertToGray(self.transpImage)
         if binarizeThreshold is not None:
             self.transpImage = self.transpImage.point(lambda p: p > binarizeThreshold and 255)
         return np.array(self.transpImage)
@@ -610,6 +621,11 @@ class BoundingBox(UtilObject):
     def addPoint(self, yCoord, xCoord):
         self.accomodate([yCoord, xCoord, yCoord+1, xCoord+1])
 
+    def addMultiPoint(self, array):
+        assert (len(array.shape) == 2) and (array.shape[1] == 2)
+        for p in array:
+            self.addPoint(int(round(p[0])), int(round(p[1])))
+
     def accomodate(self, updateRect):
          updateRect = np.array(updateRect).astype(np.int)
          self._rect[:2] = np.where(self._rect[:2] > updateRect[:2], updateRect[:2], self._rect[:2])
@@ -618,6 +634,46 @@ class BoundingBox(UtilObject):
     @property
     def rect(self):
         return tuple(self._rect)
+
+class BoundingBoxStats(UtilObject):
+    """
+    Calculates statistics of the object position in the picture
+    """
+    def __init__(self):
+        self.bBoxes = []
+
+    def addBBox(self, shape, bb):
+        self.bBoxes.append((shape[0], shape[1]) + bb)
+
+    def stats(self):
+        aspRatio = []
+        centerDistY = []
+        centerDistX = []
+        relHeight = []
+        relWidth = []
+        for h, w, yMin, xMin, yMax, xMax in self.bBoxes:
+            yCenter = (yMax + yMin) / 2
+            xCenter = (xMax + xMin) / 2
+            try:
+                aspRatio.append((yMax - yMin) / (xMax - xMin))
+                centerDistY.append(2 * (yCenter - h/2) / (h - (yMax - yMin)))
+                centerDistX.append((xCenter - w/2) / (w - (xMax - xMin)))
+                relHeight.append((yMax - yMin) / h)
+                relWidth.append((xMax - xMin) / w)
+            except (ZeroDivisionError, FloatingPointError):
+                continue
+
+        d = {}
+        for name in ['aspRatio', 'centerDistY', 'centerDistX', 'relHeight', 'relWidth']:
+            d[name] = self.getStat(name, locals()[name])
+        return d
+
+    def getStat(self, name, statList):
+        return (np.mean(statList), np.std(statList))
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@
 
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
+from scipy.ndimage import measurements as scipyMeasure
 import math
 
 class HeatMapHelper(UtilObject):
@@ -59,8 +60,24 @@ class HeatMap(UtilObject):
     def pointDistance(self, hMapHlpr, yCoord, xCoord):
         return hMapHlpr.pointDistance(self, yCoord, xCoord)
 
+    def maxCoord(self):
+        assert self.valid
+        return np.unravel_index(np.argmax(self.data), self.data.shape)
+
+    def spread(self):
+        assert self.valid
+        sqData = self.data * self.data
+        sqData = sqData / np.sum(sqData)
+        yCenter, xCenter = scipyMeasure.center_of_mass(sqData)
+        h,w = self.data.shape
+        byY = np.repeat(range(h), w).reshape((h,w)).astype(np.float32) - yCenter
+        byX = np.tile(range(w), h).reshape((h,w)).astype(np.float32) - xCenter
+        byY *= byY
+        byX *= byX
+        return (np.sqrt(np.sum(sqData * byY)), np.sqrt(np.sum(sqData * byX)))
+
     def pointDistMax(self, yCoord, xCoord):
-        y, x = np.unravel_index(np.argmax(self.data), self.data.shape)
+        y, x = self.maxCoord()
         dx = x - xCoord
         dy = y - yCoord
         return math.sqrt(dx*dx + dy*dy)

@@ -251,7 +251,7 @@ class UtilMultiFile(UtilObject):
                 self.xactCount else 0)
 
 
-def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
+def UtilDrawHistogram(inputList = None, show = True, bwFactor = None, saveFile = None):
     if inputList is None:
         if show:
             plt.show()
@@ -281,6 +281,11 @@ def UtilDrawHistogram(inputList = None, show = True, bwFactor = None):
         plt.plot(xCoord, yCoord)
         if show:
             plt.show()
+        if saveFile is not None:
+            plt.savefig(saveFile)
+
+def UtilCloseHistogram():
+    plt.close()
 
 def UtilStorageFileType(fileName):
     # By extension
@@ -417,7 +422,7 @@ def UtilSafeMkdir(dirName):
     ret = False
     try:
         if not os.path.exists(dirName):
-            os.mkdir(dirName)
+            os.makedirs(dirName)
             ret = True
     except OSError as exception:
         if exception.errno != errno.EEXIST:

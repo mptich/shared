@@ -15,3 +15,5 @@ else:
     from functools import reduce
     maxint = sys.maxsize
 
+import numpy as np
+np.seterr(all='raise')
