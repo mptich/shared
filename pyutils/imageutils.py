@@ -53,6 +53,16 @@ def UtilImageToUint8(img):
 def UtilImageToFloat(img):
     return img.astype(np.float32)
 
+def UtilValidateImagePoint(shape, point):
+    h,w=shape
+    y,x=point
+    return ((y >= 0) and (y < h) and (x >= 0) and (x < w))
+
+def UtilValidateBoundBox(shape, bb):
+    h,w=shape
+    yMin,xMin,yMax,xMax = bb
+    return ((yMin >= 0) and (yMin < h) and (xMin >= 0) and (xMin < w) and \
+            (yMax <= h) and (xMax <= w) and (yMin < yMax) and (xMin < xMax))
 
 def UtilImageResize(img, destHeight, destWidth, applyGauss=True):
     """
@@ -148,7 +158,7 @@ def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
     return newArr.clip(min=0., max=255.)
 
 
-def UtilMatrixToImage(mat, imageName = None, method = "direct"):
+def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     """
     Mostly for debug purposes: convert "arbitrary" marix to an image array
     :param mat: input matrix
@@ -158,7 +168,7 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
     """
     shape = np.shape(mat)
     if (len(shape) > 3) or (len(shape) < 2):
-        raise ValueError("UtilMatrixToImage wrong shape %s" % repr(shape))
+        raise ValueError("UtilDbgMatrixToImage wrong shape %s" % repr(shape))
     if len(shape) == 2:
         count = 1
     else:
@@ -166,7 +176,7 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
         if count == 1:
             mat = np.reshape(mat, shape[:2])
     if (count > 3) or (count == 0):
-        raise ValueError("UtilMatrixToImage wrong last dimension %d" % count)
+        raise ValueError("UtilDbgMatrixToImage wrong last dimension %d" % count)
 
     if count == 2:
         mat = np.dstack([mat[:,:,0], mat[:,:,1], np.zeros(shape[:2], dtype = np.float32)])
@@ -191,7 +201,7 @@ def UtilMatrixToImage(mat, imageName = None, method = "direct"):
                 lBound.append(l[length * i / 255])
             img = np.searchsorted(lBound, mat)
         elif (count == 3):
-            images = [UtilMatrixToImage(mat[:,:,i], method=method) for i in range(count)]
+            images = [UtilDbgMatrixToImage(mat[:, :, i], method=method) for i in range(count)]
             img = np.dstack([images[i] for i in range(count)])
         else:
             raise ValueError("No implemented")
@@ -353,7 +363,7 @@ class CVImage(UtilObject):
         self.data = np.dstack([scipyFilters.gaussian_filter(self.data[:,:,i], sigma=sigma) for i in range(3)])
 
     def image(self, imageName=None):
-        return UtilMatrixToImage(self.data, imageName=imageName, method = "direct")
+        return UtilDbgMatrixToImage(self.data, imageName=imageName, method ="direct")
 
     @staticmethod
     def weightRing(radius):
@@ -592,7 +602,7 @@ class CVImage(UtilObject):
         horEdges = np.sum(horEdges * horEdges, axis=2)
         vertEdges = np.sum(vertEdges * vertEdges, axis=2)
         self.edges = np.sqrt(horEdges + vertEdges)
-        return UtilMatrixToImage(self.edges)
+        return UtilDbgMatrixToImage(self.edges)
 
     def meanSharpness(self):
         h,w = self.edges.shape
