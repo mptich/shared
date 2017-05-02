@@ -667,7 +667,7 @@ class BoundingBoxStats(UtilObject):
             try:
                 aspRatio.append((yMax - yMin) / (xMax - xMin))
                 centerDistY.append(2 * (yCenter - h/2) / (h - (yMax - yMin)))
-                centerDistX.append((xCenter - w/2) / (w - (xMax - xMin)))
+                centerDistX.append(2 * (xCenter - w/2) / (w - (xMax - xMin)))
                 relHeight.append((yMax - yMin) / h)
                 relWidth.append((xMax - xMin) / w)
             except (ZeroDivisionError, FloatingPointError):
