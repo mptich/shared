@@ -58,11 +58,45 @@ def UtilValidateImagePoint(shape, point):
     y,x=point
     return ((y >= 0) and (y < h) and (x >= 0) and (x < w))
 
-def UtilValidateBoundBox(shape, bb):
+def UtilValidateBoundBox(shape, bb, margin=0):
     h,w=shape
     yMin,xMin,yMax,xMax = bb
-    return ((yMin >= 0) and (yMin < h) and (xMin >= 0) and (xMin < w) and \
-            (yMax <= h) and (xMax <= w) and (yMin < yMax) and (xMin < xMax))
+    return ((yMin >= margin) and (yMin < h-margin) and (xMin >= margin) and (xMin < w-margin) and \
+            (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
+
+
+def UtilVerticalScale(img, destHeight, destWidth, padValue = 0.):
+    """
+    Scales image in such a way that it is fit by height, and width either cropped or padded
+    :param img: input image
+    :param destHeight: desired height
+    :param destWidth: desired width
+    :param padValue: in case of padding, what value to use
+    :return: tuple (Scaled image, scale ratio, left pad)
+    """
+
+    h,w = img.shape[:2]
+
+    # Scale by height
+    scale = destHeight / h
+    realWidth = int(round(w * scale))
+    img = UtilImageResize(img, destHeight, realWidth)
+
+    # See if padding / clipping is needed
+    leftPadWidth = (destWidth - realWidth) // 2
+    rightPadWidth = destWidth - realWidth - leftPadWidth
+    assert (leftPadWidth * rightPadWidth) >= 0
+    if (leftPadWidth + rightPadWidth) > 0:
+        padTuple = ((0, 0), (leftPadWidth, rightPadWidth))
+        if len(img.shape) == 3:
+            padTuple += ((0,0),)
+        img = np.pad(img, padTuple, mode='constant', constant_values=padValue)
+    else:
+        img = img[:, -leftPadWidth:realWidth + rightPadWidth]
+
+    assert img.shape[:2] == (destHeight, destWidth)
+    return (img, scale, leftPadWidth)
+
 
 def UtilImageResize(img, destHeight, destWidth, applyGauss=True):
     """
