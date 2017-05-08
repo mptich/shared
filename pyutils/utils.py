@@ -10,9 +10,6 @@ import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
-import tempfile
-import csv
-import subprocess
 import errno
 
 
@@ -387,33 +384,6 @@ def UtilNumpyClippingValue(dtype):
     return info.tiny * 10.
 
 
-def UtilFanMultiProcess(listProc, logFilePrefix=None):
-    """
-    Launches prcesses listed in listProc
-    :param listProc: list of process command lines
-    :param logFilePrefix: prefix of teh log file; an ordinal is added to it, then ".txt"
-    :return: list of exit codes
-    """
-    pList = []
-    fLogList = []
-    for index,pName in enumerate(listProc):
-        fLog = None
-        if logFilePrefix is not None:
-            logFileName = logFilePrefix + ("%05d" % index) + ".txt"
-            fLog = open(logFileName, "w")
-            fLogList.append(fLog)
-        logFile = fLog if fLog is not None else subprocess.PIP
-        pList.append(subprocess.Popen(pName, shell=True, universal_newlines=True, \
-                                      stdout=logFile, stderr=logFile))
-
-    # Wait for all child processes to finish
-    exitCodes = [p.wait() for p in pList]
-    if logFilePrefix is not None:
-        for fLog in fLogList:
-            fLog.flush()
-            fLog.close()
-    return exitCodes
-
 def UtilSafeMkdir(dirName):
     """
     If several processes are trying to create a directory simultaneously, it might cause a race condition.
@@ -437,46 +407,6 @@ class UtilWrapper:
     def __init__(self, val):
         self.value = val
 
-class UtilMultiCsvWriter(UtilObject):
-    """
-    This class distributes multiple CSV writes among several files, so they can be eventually
-    passed to different processes
-    """
-    def __init__(self, fileCount, dir=None):
-        self.fhs = []
-        self.fds = []
-        self.fileNames = []
-        self.cws = []
-        for i in range(fileCount):
-            fd, fileName = tempfile.mkstemp(prefix="UtilMultiCsvWriter_", dir=dir, text=True)
-            self.fds.append(fd)
-            self.fileNames.append(fileName)
-            fh = open(fileName, 'w')
-            csvw = csv.writer(fh)
-            self.cws.append(csvw)
-            self.fhs.append(fh)
-        self.count = fileCount
-        self.counter = 0
-        self.active = True
-
-    def getFileNames(self):
-        return self.fileNames
-
-    def record(self, l):
-        self.cws[self.counter].writerow(l)
-        self.counter = (self.counter + 1) % self.count
-
-    def finish(self):
-        """
-        :return: list of created file names
-        """
-        if self.active:
-            for fh in self.fhs:
-                fh.close()
-            for fd in self.fds:
-                os.close(fd)
-            self.active = False
-        return self.fileNames
 
 
 
