@@ -65,7 +65,7 @@ def UtilValidateBoundBox(shape, bb, margin=0):
             (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
 
 
-def UtilVerticalScale(img, destHeight, destWidth, padValue = 0.):
+def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., applyGauss=False):
     """
     Scales image in such a way that it is fit by height, and width either cropped or padded
     :param img: input image
@@ -80,7 +80,7 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0.):
     # Scale by height
     scale = destHeight / h
     realWidth = int(round(w * scale))
-    img = UtilImageResize(img, destHeight, realWidth)
+    img = UtilImageResize(img, destHeight, realWidth, applyGauss=applyGauss)
 
     # See if padding / clipping is needed
     leftPadWidth = (destWidth - realWidth) // 2
