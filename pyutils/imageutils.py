@@ -44,7 +44,7 @@ def UtilFromGrayToRgb(img):
     return np.flip(img, axis=2)
 
 def UtilImageToInt(img):
-    return (img + 0.5).astype(np.int).clip(min=0, max=255)
+    return np.rint(img).astype(np.int).clip(min=0, max=255)
 
 def UtilImageToUint8(img):
     # Required by PIL Image.fromarray
@@ -155,7 +155,7 @@ def UtilImageEdge(img):
     return np.array(img.filter(ImageFilter.FIND_EDGES))
 
 
-def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
+def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3):
     """
     Mapping image geometrically
     :param img: input image
@@ -164,11 +164,7 @@ def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
     """
     h = img.shape[0]
     w = img.shape[1]
-    logicMap = np.logical_and(map[:,:,0] <= float(h-1), map[:,:,1] <= float(w-1))
-    logicMap = np.logical_and(logicMap, map[:,:,0] > 0.)
-    logicMap = np.logical_and(logicMap, map[:,:,1] > 0.)
     assert map.shape[:2] == (h,w)
-    assert logicMap.shape == (h,w)
     imgArr = img.astype(np.float32)
     if len(imgArr.shape) == 3:
         f = [interpolate.RectBivariateSpline(range(h), range(w), imgArr[:,:,i], ky=ky, kx=kx) for i in range(3)]
@@ -176,18 +172,42 @@ def UtilRemapImage(img, map, fillValue=127., ky=3, kx=3):
     else:
         f = interpolate.RectBivariateSpline(range(h), range(w), imgArr, ky=ky, kx=kx)
         mono = True
+
+    # Deal with the mapped values outside of the source image border
+    fillMap = None
+    if fillMethod == "constant":
+        fillMap = np.logical_and(map[:, :, 0] <= float(h-1), map[:, :, 1] <= float(w-1))
+        fillMap = np.logical_and(fillMap, map[:, :, 0] > 0.)
+        fillMap = np.logical_and(fillMap, map[:, :, 1] > 0.)
+        assert fillMap.shape == (h, w)
+    elif fillMethod == "reflect":
+        absMap = np.abs(map)
+        def _reflectMap(singleVarMap, size):
+            tiledMap = (singleVarMap / size).astype(np.int)
+            singleVarMap = singleVarMap - tiledMap * size
+            reflectMap = np.bitwise_and(tiledMap, 1)
+            return np.where(reflectMap, size - singleVarMap, singleVarMap)
+        map = np.stack([_reflectMap(absMap[:,:,0], h), _reflectMap(absMap[:,:,1], w)], axis=2)
+    else:
+        raise ValueError('Wrong value of fillMethod: %s' % fillMethod)
+
     yFlat = np.repeat(np.array(range(h)), w)
     xFlat = np.tile(np.array(range(w)), h)
     remap = map[yFlat, xFlat]
     assert remap.shape == (h * w, 2)
     yImgCoord = remap[:,0]
     xImgCoord = remap[:,1]
+
     if mono:
         newArr = f(yImgCoord, xImgCoord, grid=False).reshape((h,w))
-        newArr = np.where(logicMap, newArr, fillValue)
+        if fillMap is not None:
+            newArr = np.where(fillMap, newArr, fillValue)
     else:
         newArr = [func(yImgCoord, xImgCoord, grid=False).reshape(h,w) for func in f]
-        newArr = np.dstack([np.where(logicMap, arr, fillValue) for arr in newArr])
+        if fillMap is not None:
+            newArr = [np.where(fillMap, arr, fillValue) for arr in newArr]
+        newArr = np.dstack(newArr)
+
     assert newArr.shape[:2] == (h,w)
     return newArr.clip(min=0., max=255.)
 
