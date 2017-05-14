@@ -1,7 +1,10 @@
 # Image utilities
 
+__author__ = "Misha Orel"
+
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
+from shared.pyutils.tensorutils import *
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageChops
@@ -37,18 +40,14 @@ def UtilArrayToImageFile(arr, fileName):
 
 def UtilFromRgbToGray(img):
     img = np.flip(img, axis=2)
-    return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    return cv2.cvtColor(img, cv2.COLOR_RGB2GRAY).astype(np.float32)
 
 def UtilFromGrayToRgb(img):
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    return np.flip(img, axis=2)
+    return np.flip(img, axis=2).astype(np.float32)
 
 def UtilImageToInt(img):
-    return np.rint(img).astype(np.int).clip(min=0, max=255)
-
-def UtilImageToUint8(img):
-    # Required by PIL Image.fromarray
-    return UtilImageToInt(img).astype(np.uint8)
+    return np.rint(img).astype(np.int).clip(min=0, max=255).astype(np.uint8)
 
 def UtilImageToFloat(img):
     return img.astype(np.float32)
@@ -181,13 +180,7 @@ def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3):
         fillMap = np.logical_and(fillMap, map[:, :, 1] > 0.)
         assert fillMap.shape == (h, w)
     elif fillMethod == "reflect":
-        absMap = np.abs(map)
-        def _reflectMap(singleVarMap, size):
-            tiledMap = (singleVarMap / size).astype(np.int)
-            singleVarMap = singleVarMap - tiledMap * size
-            reflectMap = np.bitwise_and(tiledMap, 1)
-            return np.where(reflectMap, size - singleVarMap, singleVarMap)
-        map = np.stack([_reflectMap(absMap[:,:,0], h), _reflectMap(absMap[:,:,1], w)], axis=2)
+        map = UtilReflectCoordTensor(map)
     else:
         raise ValueError('Wrong value of fillMethod: %s' % fillMethod)
 
@@ -252,7 +245,7 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
             length = len(l)
             lBound = []
             for i in range(255):
-                lBound.append(l[length * i / 255])
+                lBound.append(l[length * i // 255])
             img = np.searchsorted(lBound, mat)
         elif (count == 3):
             images = [UtilDbgMatrixToImage(mat[:, :, i], method=method) for i in range(count)]
@@ -265,6 +258,8 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     img = img.clip(min=0., max=255.)
 
     if imageName is not None:
+        if len(img.shape) == 2:
+            img = UtilFromGrayToRgb(img)
         UtilArrayToImageFile(img, imageName)
 
     return img
@@ -382,6 +377,7 @@ class CVImage(UtilObject):
             data = np.copy(image.data)
         else:
             assert isinstance(image, np.ndarray)
+            data = image
 
         # Normalize
         meanVal = np.mean(data, axis=(0,1))
@@ -734,8 +730,6 @@ class BoundingBoxStats(UtilObject):
 
     def getStat(self, name, statList):
         return (np.mean(statList), np.std(statList))
-
-
 
 
 

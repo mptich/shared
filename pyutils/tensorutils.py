@@ -1,0 +1,90 @@
+# Utilities for multidimensional arrays
+
+__author__ = "Misha Orel"
+
+import shared.pyutils.forwardCompat as forwardCompat
+from shared.pyutils.utils import *
+
+
+def UtilRandomSinFunc(shape, order, expectedStd, independentAxes=False):
+    """
+    Returns function made of multidimensional sin functions, with randomly selected phase and amplitude,
+    max frequency by each axis is "order", mean = 0, std = std
+    :param shape: dimensions of the output array
+    :param order: max sin frequency along each axis. The higher the order, teh less correlated will be values
+    in teh neighbor points. Order is either a number, or a tuple (one separate value per dimension)
+    :param std: std of the output
+    :return: f(Zn)
+    """
+    n = len(shape)
+    angleMult = np.reciprocal(np.array(shape, dtype=np.float32)) * 2. * np.pi
+    ret = np.zeros(shape=shape, dtype=np.float32)
+    if not isinstance(order, tuple):
+        order = tuple([order] * n)
+    coordTensor = UtilCartesianMatrix(*[range(x) for x in shape]) * angleMult
+    if not independentAxes:
+        orderSet = UtilCartesianMatrix(*[range(x+1) for x in order]).reshape(-1, n)[1:,:] # Exclude all 0s
+    else:
+        orderSet = [((0,) * y + (x,) + (0,) * (n-y-1)) for y in range(n) for x in range(1,order[y]+1)]
+    for multipliers in orderSet:
+        phase = np.random.uniform(low=-np.pi, high=np.pi)
+        apmpl = np.random.uniform(low=0., high=1.)
+        ret += np.sin(np.sum(coordTensor * multipliers, axis=n) + phase)
+    std = np.std(ret)
+    std = max(std, UtilNumpyClippingValue(np.float32))
+    return expectedStd / std * ret
+
+
+def UtilCartesianMatrix2d(arr1, arr2):
+    """
+    Converts [0,1], [2,4] into
+    [0,2],[0,4]
+    [1,2],[1,4]
+    """
+    arr1, arr2 = (np.array(x) if not isinstance(x, np.ndarray) else x for x in (arr1, arr2))
+    assert len(arr1.shape) == len(arr2.shape) == 1
+    transp = np.transpose([np.repeat(arr1, len(arr2)), np.tile(arr2, len(arr1))])
+    return transp.reshape((len(arr1), len(arr2), 2))
+
+
+def UtilCartesianMatrix3d(arr1, arr2, arr3):
+    """
+    Converts [0,1], [2,4], [8,9] into
+    [[0,2,8],[0,2,9]], [[0,4,8], [0,4,9]]
+    [[1,2,8],[1,2,9]], [[1,4,8],[1,4,9]]
+    """
+    arr1, arr2, arr3 = (np.array(x) if not isinstance(x, np.ndarray) else x for x in (arr1, arr2, arr3))
+    assert len(arr1.shape) == len(arr2.shape) == len(arr3.shape) == 1
+    transp = np.transpose([np.repeat(arr1, len(arr2)*len(arr3)), \
+                           np.repeat(np.tile(arr2, len(arr1)), len(arr3)), \
+                           np.tile(arr3, len(arr1)*len(arr2))])
+    return transp.reshape((len(arr1), len(arr2), len(arr3), 3))
+
+
+def UtilCartesianMatrix(arr1, arr2=None, arr3=None):
+    if arr2 is None:
+        return np.array(arr1).reshape(-1,1)
+    elif arr3 is None:
+        return UtilCartesianMatrix2d(arr1, arr2)
+    return UtilCartesianMatrix3d(arr1, arr2, arr3)
+
+
+def UtilReflectCoordTensor(map):
+    """
+    Takes a tensor with values representing mapping coordinates, and replaces out-of-range values
+    with reflections from edges
+    :param img:
+    :return:
+    """
+    def _reflectMap(singleVarMap, size):
+        tiledMap = (singleVarMap / size).astype(np.int)
+        singleVarMap = singleVarMap - tiledMap * size
+        reflectMap = np.bitwise_and(tiledMap, 1)
+        return np.where(reflectMap, size - singleVarMap, singleVarMap)
+    n = len(map.shape) - 1
+    assert map.shape[n] == n
+    map = np.abs(map)
+    shape = map.shape
+    reshapedMap = map.reshape((-1, n))
+    return np.stack([_reflectMap(reshapedMap[:, i], shape[i]) for i in range(n)], axis=1).reshape(shape)
+

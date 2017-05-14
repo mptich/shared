@@ -366,17 +366,6 @@ def BivarPolynomialOffset(coefList, dx, dy):
 
     raise ValueError("BivarPolynomialOffset degree %d is not supported yet" % N)
 
-def UtilCartesianMatrix(arr1, arr2):
-    """
-    Converts [0,1], [2,4] into
-    [0,2],[0,4]
-    [1,2],[1,4]
-    """
-    arr1, arr2 = (np.array(x) if not isinstance(x, np.ndarray) else x for x in (arr1, arr2))
-    assert len(arr1.shape) == len(arr2.shape) == 1
-    transp = np.transpose([np.repeat(arr1, len(arr2)), np.tile(arr2, len(arr1))])
-    return transp.reshape((len(arr1), len(arr2), 2))
-
 
 # It is expensive first time, so implement it as a function
 def UtilNumpyClippingValue(dtype):
