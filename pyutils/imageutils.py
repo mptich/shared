@@ -123,26 +123,77 @@ def UtilImageResize(img, destHeight, destWidth, applyGauss=True):
     img = scipy.misc.imresize(img, (destHeight, destWidth))
     return img
 
-def UtilStitchImagesHor(imgNameList, outImageName):
+def UtilStitchImagesHor(imgInputList, outImageName=None, padMode='constant', constValue=127., seamsList=None):
     imgList = []
-    for name in imgNameList:
-        imgList.append(Image.open(name))
+    for img in imgInputList:
+        if isinstance(img, str):
+            img = UtilImageFileToArray(img)
+        assert len(img.shape) == 3
+        imgList.append(img)
+
+    # Make them all of the same height
+    maxHeight = max([x.shape[0] for x in imgList])
+    eqImgList = []
+    for img in imgList:
+        img = np.pad(img, ((maxHeight - img.shape[0], 0), (0,0), (0,0)), mode=padMode, constant_values=constValue)
+        eqImgList.append(img)
 
     width = 0
-    height = 0
-    for image in imgList:
-        w, h = image.size
-        width += w
-        if height < h:
-            height = h
+    for img in eqImgList:
+        width += img.shape[1]
+        if seamsList is not None:
+            seamsList.append(width)
 
-    start = 0
-    result = Image.new('RGB', (width, height))
-    for image in imgList:
-        result.paste(im=image, box=(start, 0))
-        start += image.size[0]
+    img = np.stack(eqImgList, axis=1)
+    if outImageName is not None:
+        UtilArrayToImageFile(img, outImageName)
+    return img
 
-    result.save(outImageName)
+def UtilStitchImagesHor(imgInputList, outImageName=None, padMode='constant', constValue=127., seamsList=None):
+    imgList = []
+    for img in imgInputList:
+        if isinstance(img, str):
+            img = UtilImageFileToArray(img)
+        assert len(img.shape) == 3
+        imgList.append(img)
+
+    # Make them all of the same height
+    maxHeight = max([x.shape[0] for x in imgList])
+    eqImgList = []
+    for img in imgList:
+        if padMode=='constant':
+            img = np.pad(img, ((maxHeight - img.shape[0], 0), (0,0), (0,0)), mode=padMode, constant_values=constValue)
+        elif padMode=='reflect':
+            img = np.pad(img, ((maxHeight - img.shape[0], 0), (0,0), (0,0)), mode=padMode)
+        eqImgList.append(img)
+
+    width = 0
+    for img in eqImgList:
+        width += img.shape[1]
+        if seamsList is not None:
+            seamsList.append(width)
+
+    img = np.concatenate(eqImgList, axis=1)
+    if outImageName is not None:
+        UtilArrayToImageFile(img, outImageName)
+    return img
+
+
+def UtilStitchImagesVert(imgInputList, outImageName=None, padMode='constant', constValue=127., seamsList=None):
+    imgList = []
+    for img in imgInputList:
+        if isinstance(img, str):
+            img = UtilImageFileToArray(img)
+        assert len(img.shape) == 3
+        imgList.append(np.transpose(img, (1,0,2)))
+
+    img = UtilStitchImagesHor(imgList, outImageName=None, padMode=padMode, constValue=constValue, \
+                              seamsList=seamsList)
+    img = np.transpose(img, (1,0,2))
+    if outImageName is not None:
+        UtilArrayToImageFile(img, outImageName)
+    return img
+
 
 def UtilImageEdge(img):
     # TODO: let's not use PIL for that
