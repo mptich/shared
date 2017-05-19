@@ -306,7 +306,7 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     else:
         raise ValueError("No implemented")
 
-    img = img.clip(min=0., max=255.)
+    img = img.clip(min=0., max=255.).astype(np.float32)
 
     if imageName is not None:
         if len(img.shape) == 2:
