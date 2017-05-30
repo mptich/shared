@@ -64,7 +64,7 @@ def UtilValidateBoundBox(shape, bb, margin=0):
             (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
 
 
-def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., applyGauss=False):
+def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., linearInterp = False):
     """
     Scales image in such a way that it is fit by height, and width either cropped or padded
     :param img: input image
@@ -79,7 +79,7 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., applyGauss=Fals
     # Scale by height
     scale = destHeight / h
     realWidth = int(round(w * scale))
-    img = UtilImageResize(img, destHeight, realWidth, applyGauss=applyGauss)
+    img = UtilImageResize(img, destHeight, realWidth, linearInterp=linearInterp)
 
     # See if padding / clipping is needed
     leftPadWidth = (destWidth - realWidth) // 2
@@ -97,30 +97,24 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., applyGauss=Fals
     return (img, scale, leftPadWidth)
 
 
-def UtilImageResize(img, destHeight, destWidth, applyGauss=True):
+def UtilImageResize(img, destHeight, destWidth, linearInterp = False, asPicture = True):
     """
-    It uses PIL algorithms. So we have to use gaussian
+    It uses OpneCV
     :param img: input image
     :param destHeight: target height
     :param destWidth: target width
     :return:
     """
     h, w = img.shape[:2]
-    depth = None
-    if len(img.shape) == 3:
-        depth = img.shape[2]
-    def gaussianCalc(srcSize, destSize):
-        if destSize >= srcSize:
-            return 0.2
-        return 0.4 * srcSize / destSize
-    ySigma = gaussianCalc(h,destHeight)
-    xSigma = gaussianCalc(w,destWidth)
-    if applyGauss:
-        if depth is None:
-            img = scipyFilters.gaussian_filter(img, (ySigma, xSigma))
-        else:
-            img = np.dstack([scipyFilters.gaussian_filter(img[:,:,i], (ySigma, xSigma)) for i in range(depth)])
-    img = scipy.misc.imresize(img, (destHeight, destWidth))
+    if linearInterp:
+        method = cv2.INTER_NEAREST
+    elif (destHeight >= h) and (destWidth >= w):
+        method = cv2.INTER_CUBIC
+    else:
+        method = cv2.INTER_AREA
+    img = cv2.resize(img, (destWidth, destHeight), interpolation=method)
+    if asPicture:
+        img = img.clip(min=0., max=255.)
     return img
 
 def UtilStitchImagesHor(imgInputList, outImageName=None, padMode='constant', constValue=127., seamsList=None):
@@ -256,6 +250,12 @@ def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3):
     return newArr.clip(min=0., max=255.)
 
 
+def UtilImageCentroid(image):
+    m = cv2.moments(image)
+    area = m['m00'] + UtilNumpyClippingValue(np.float32)
+    return (m['m01']/area, m['m10']/area)
+
+
 def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     """
     Mostly for debug purposes: convert "arbitrary" marix to an image array
@@ -367,7 +367,7 @@ class ImageAnnot(UtilObject):
             raise ValueError("TranspImage is in wrong mode %s" % pilImg.mode)
         return pilImg
 
-    def addAnnotPoint(self, x, y, size = 2, color = (0,0,0)):
+    def addAnnotPoint(self, y, x, size = 2, color = (0,0,0)):
         if (x < 0) or (x > self.size[0]-1) or \
                 (y < 0) or (y > self.size[1]-1):
             raise ValueError("%s: %d,%d is outside of image size %s" % (self.name,x,y,self.size))
@@ -385,9 +385,9 @@ class ImageAnnot(UtilObject):
         imgDraw.line([lowerLeft, upperRight], fill=color)
         imgDraw.line([upperLeft, lowerRight], fill=color)
 
-    def addDoubleAnnotPoint(self, x1, y1, x2, y2, size=2, color1=(0,255,0), color2=(255,0,0), colorLine=(0,0,0)):
-        self.addAnnotPoint(x1, y1, size, color1)
-        self.addAnnotPoint(x2, y2, size, color2)
+    def addDoubleAnnotPoint(self, y1, x1, y2, x2, size=2, color1=(0,255,0), color2=(255,0,0), colorLine=(0,0,0)):
+        self.addAnnotPoint(y1, x1, size, color1)
+        self.addAnnotPoint(y2, x2, size, color2)
         assert self.overImage is not None
         imgDraw = ImageDraw.Draw(self.overImage)
         imgDraw.line([(x1,y1), (x2,y2)], fill=colorLine)

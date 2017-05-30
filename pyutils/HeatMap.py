@@ -2,6 +2,7 @@
 
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
+from shared.pyutils.imageutils import *
 from scipy.ndimage import measurements as scipyMeasure
 import math
 
@@ -43,6 +44,13 @@ class HeatMapHelper(UtilObject):
         """
         return self.pointDistance(self.flatHeatMap, yCoord, xCoord)
 
+    def sum(self, heatMapList):
+        lData = [h.data for h in heatMapList if h.valid]
+        if lData:
+            return HeatMap(sum(lData))
+        return HeatMap(np.zeros((self.height, self.width), dtype=np.float32))
+
+
 
 class HeatMap(UtilObject):
     clippingValue = UtilNumpyClippingValue(np.float32)
@@ -55,6 +63,7 @@ class HeatMap(UtilObject):
             self.data = arr / self.weight
             self.valid = True
         else:
+            self.data = arr
             self.valid = False
 
     def pointDistance(self, hMapHlpr, yCoord, xCoord):
@@ -63,6 +72,10 @@ class HeatMap(UtilObject):
     def maxCoord(self):
         assert self.valid
         return np.unravel_index(np.argmax(self.data), self.data.shape)
+
+    def centroid(self):
+        assert self.valid
+        return UtilImageCentroid(self.data)
 
     def spread(self):
         assert self.valid
@@ -76,8 +89,8 @@ class HeatMap(UtilObject):
         byX *= byX
         return (np.sqrt(np.sum(sqData * byY)), np.sqrt(np.sum(sqData * byX)))
 
-    def pointDistMax(self, yCoord, xCoord):
-        y, x = self.maxCoord()
-        dx = x - xCoord
-        dy = y - yCoord
-        return math.sqrt(dx*dx + dy*dy)
+    def getData(self):
+        # Valid or not
+        return np.copy(self.data)
+
+
