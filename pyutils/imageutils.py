@@ -32,11 +32,14 @@ def UtilImageFileToArray(fileName):
         img = np.flip(img, axis=2)
     return UtilImageToFloat(img)
 
-def UtilArrayToImageFile(arr, fileName):
+def UtilArrayToImageFile(arr, fileName, jpgQuality=None):
     arr = UtilImageToInt(arr)
     if (len(arr.shape) == 3) and (arr.shape[2] == 3):
         arr = np.flip(arr, axis=2)
-    cv2.imwrite(fileName, arr)
+    if (jpgQuality is None) or (os.path.splitext(fileName)[1].lower() not in ('.jpg', '.jpeg')):
+        cv2.imwrite(fileName, arr)
+    else:
+        cv2.imwrite(fileName, arr, [cv2.CV_IMWRITE_JPEG_QUALITY, int(jpgQuality)])
 
 def UtilFromRgbToGray(img):
     img = np.flip(img, axis=2)
@@ -64,7 +67,7 @@ def UtilValidateBoundBox(shape, bb, margin=0):
             (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
 
 
-def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., linearInterp = False):
+def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., interp = 'cubic'):
     """
     Scales image in such a way that it is fit by height, and width either cropped or padded
     :param img: input image
@@ -79,7 +82,7 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., linearInterp = 
     # Scale by height
     scale = destHeight / h
     realWidth = int(round(w * scale))
-    img = UtilImageResize(img, destHeight, realWidth, linearInterp=linearInterp)
+    img = UtilImageResize(img, destHeight, realWidth, interp=interp)
 
     # See if padding / clipping is needed
     leftPadWidth = (destWidth - realWidth) // 2
@@ -97,7 +100,7 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., linearInterp = 
     return (img, scale, leftPadWidth)
 
 
-def UtilImageResize(img, destHeight, destWidth, linearInterp = False, asPicture = True):
+def UtilImageResize(img, destHeight, destWidth, interp = 'cubic', asPicture = True):
     """
     It uses OpneCV
     :param img: input image
@@ -106,10 +109,17 @@ def UtilImageResize(img, destHeight, destWidth, linearInterp = False, asPicture 
     :return:
     """
     h, w = img.shape[:2]
-    if linearInterp:
+    assert interp in ('nearest', 'cubic', 'linear', 'lanczos')
+    if interp == 'nearest':
         method = cv2.INTER_NEAREST
     elif (destHeight >= h) and (destWidth >= w):
-        method = cv2.INTER_CUBIC
+        if interp == 'linear':
+            method = cv2.INTER_LINEAR
+        elif interp == 'cubic':
+            method = cv2.INTER_CUBIC
+        else:
+            assert interp == 'lanczos'
+            method = cv2.INTER_LANCZOS4
     else:
         method = cv2.INTER_AREA
     img = cv2.resize(img, (destWidth, destHeight), interpolation=method)
