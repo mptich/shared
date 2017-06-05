@@ -284,6 +284,15 @@ def UtilDrawHistogram(inputList = None, show = True, bwFactor = None, saveFile =
 def UtilCloseHistogram():
     plt.close()
 
+def UtilMergeDicts(*dictArgs):
+    """
+    This function "fixes" the fact that dict.update() returns None
+    """
+    ret = {}
+    for d in dictArgs:
+        ret.update(d)
+    return ret
+
 def UtilStorageFileType(fileName):
     # By extension
     fileType = None
