@@ -60,6 +60,22 @@ def UtilValidateImagePoint(shape, point):
     y,x=point
     return ((y >= 0) and (y < h) and (x >= 0) and (x < w))
 
+def UtilValidatePointPosAbove(points1, points2, equal=False):
+    y1 = np.max(np.array(points1)[:,0])
+    y2 = np.min(np.array(points2)[:,0])
+    if not equal:
+        return (y2 > y1)
+    else:
+        return (y2 >= y1)
+
+def UtilValidatePointPosRight(points1, points2, equal=False):
+    x1 = np.min(np.array(points1)[:,1])
+    x2 = np.max(np.array(points2)[:,1])
+    if not equal:
+        return (x1 > x2)
+    else:
+        return (x1 >= x2)
+
 def UtilValidateBoundBox(shape, bb, margin=0):
     h,w=shape
     yMin,xMin,yMax,xMax = bb
@@ -67,7 +83,7 @@ def UtilValidateBoundBox(shape, bb, margin=0):
             (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
 
 
-def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., interp = 'cubic'):
+def UtilVerticalScale(img, destHeight, destWidth, padValue=0, padMode='constant', interpMode='cubic'):
     """
     Scales image in such a way that it is fit by height, and width either cropped or padded
     :param img: input image
@@ -82,7 +98,7 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., interp = 'cubic
     # Scale by height
     scale = destHeight / h
     realWidth = int(round(w * scale))
-    img = UtilImageResize(img, destHeight, realWidth, interp=interp)
+    img = UtilImageResize(img, destHeight, realWidth, interp=interpMode)
 
     # See if padding / clipping is needed
     leftPadWidth = (destWidth - realWidth) // 2
@@ -92,7 +108,10 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue = 0., interp = 'cubic
         padTuple = ((0, 0), (leftPadWidth, rightPadWidth))
         if len(img.shape) == 3:
             padTuple += ((0,0),)
-        img = np.pad(img, padTuple, mode='constant', constant_values=padValue)
+        if padMode == 'constant':
+            img = np.pad(img, padTuple, mode=padMode, constant_values=padValue)
+        else:
+            img = np.pad(img, padTuple, mode=padMode)
     else:
         img = img[:, -leftPadWidth:realWidth + rightPadWidth]
 
