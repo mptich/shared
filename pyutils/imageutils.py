@@ -5,6 +5,7 @@ __author__ = "Misha Orel"
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
 from shared.pyutils.tensorutils import *
+from shared.algorithms.regionUtils import *
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageChops
@@ -367,8 +368,8 @@ class ImageAnnot(UtilObject):
     def clear(self):
         self.xorImage = None
         self.xorName = None
-        self.overImage = None
         self.transpImage = None
+        self.overImage = Image.new("RGBA", self.size)
 
     def save(self, outImgName=None):
         image = self.image.copy()
@@ -376,9 +377,7 @@ class ImageAnnot(UtilObject):
             assert self.xorImage.mode == "L"
             imgInvert = ImageChops.invert(image)
             image.paste(imgInvert, (0,0), self.xorImage)
-        if self.overImage:
-            assert self.overImage.mode == "RGBA"
-            image.paste(self.overImage, (0,0), self.overImage)
+        image.paste(self.overImage, (0,0), self.overImage)
         if self.transpImage:
             image = Image.fromarray(np.concatenate([np.asarray(image), \
                 np.expand_dims(np.asarray(self.transpImage), axis=2)], axis=2), mode="RGBA")
@@ -408,8 +407,6 @@ class ImageAnnot(UtilObject):
         lowerLeft = (x-lowerLeftMarg, y+lowerLeftMarg)
         upperRight = (x+upperRightMarg, y-upperRightMarg)
         lowerRight = (x+lowerRightMarg, y+lowerRightMarg)
-        if self.overImage is None:
-            self.overImage = Image.new("RGBA", self.size)
         imgDraw = ImageDraw.Draw(self.overImage)
         imgDraw.line([lowerLeft, upperRight], fill=color)
         imgDraw.line([upperLeft, lowerRight], fill=color)
@@ -417,7 +414,6 @@ class ImageAnnot(UtilObject):
     def addDoubleAnnotPoint(self, y1, x1, y2, x2, size=2, color1=(0,255,0), color2=(255,0,0), colorLine=(0,0,0)):
         self.addAnnotPoint(y1, x1, size, color1)
         self.addAnnotPoint(y2, x2, size, color2)
-        assert self.overImage is not None
         imgDraw = ImageDraw.Draw(self.overImage)
         imgDraw.line([(x1,y1), (x2,y2)], fill=colorLine)
 
@@ -430,6 +426,22 @@ class ImageAnnot(UtilObject):
             self.xorName = None
             self.xorImage = Image.fromarray(img)
         self.xorImage = self.convertToGray(self.xorImage)
+
+    def setBoundaryMask(self, img, colorExtern=(255,0,0), colorIntern=(0,255,0)):
+        if isinstance(img, str):
+            img = self.convertToGray(Image.open(img, "r"))
+            img = np.array(img) >= 128
+        else:
+            assert isinstance(img, np.ndarray)
+            assert len(img.shape) == 2
+        boundaries = UtilRegionBoundaries(img)
+        externalCoord = np.transpose(np.logical_and(boundaries, np.logical_not(img)).nonzero())
+        externalCoord = np.flip(externalCoord, axis=1).flatten() # PIL requires x,y
+        internalCoord = np.transpose(np.logical_and(boundaries, img).nonzero())
+        internalCoord = np.flip(internalCoord, axis=1).flatten()
+        imgDraw = ImageDraw.Draw(self.overImage)
+        imgDraw.point(list(externalCoord), fill=colorExtern)
+        imgDraw.point(list(internalCoord), fill=colorIntern)
 
     def setTransparencyMask(self, img, binarizeThreshold=None):
         if isinstance(img, str):
