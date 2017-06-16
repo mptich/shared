@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import sys
+import platform
 usingVersion3 = (sys.version_info[0] == 3)
 
 if not usingVersion3:
@@ -17,3 +18,6 @@ else:
 
 import numpy as np
 np.seterr(all='raise')
+
+def ThisIsWindows():
+    return platform.system().lower() == 'windows'

@@ -2,6 +2,7 @@
 
 import os
 import json
+import glob
 try:
    import cPickle as pickle
 except:
@@ -397,6 +398,19 @@ def UtilSafeMkdir(dirName):
         if exception.errno != errno.EEXIST:
             raise
     return ret
+
+def UtilSafeMultiGlob(listOfPatterns):
+    """
+    In Windows, same file name could be returned several times from multiple globs, because of upper/lower
+    case characters in file names. This generator makes sure that each file name returned just once
+    :param listOfPatterns: list of patterns to be passed to glob.glob()
+    :return:
+    """
+    s = set()
+    for pat in listOfPatterns:
+        s += set(glob.glob(pat))
+    for name in s:
+        yield name
 
 
 # Wrapper for primitive values, so they can be returned as
