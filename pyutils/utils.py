@@ -408,7 +408,7 @@ def UtilSafeMultiGlob(listOfPatterns):
     """
     s = set()
     for pat in listOfPatterns:
-        s += set(glob.glob(pat))
+        s |= set(glob.glob(pat))
     for name in s:
         yield name
 
