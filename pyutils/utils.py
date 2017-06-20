@@ -275,7 +275,11 @@ def UtilDrawHistogram(inputList = None, show = True, bwFactor = None, saveFile =
         print ("gaussian_kde failed on list %s" % repr(inputList))
     if gkde:
         xCoord = np.arange(start, stop, step)
-        yCoord = gkde.evaluate(xCoord)
+        try:
+            yCoord = gkde.evaluate(xCoord)
+        except FloatingPointError as ex:
+            print('UtilDrawHistogram: xCoord=%s: %s' % (str(xCoord), str(ex)))
+            return
         plt.plot(xCoord, yCoord)
         if show:
             plt.show()
