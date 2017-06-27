@@ -381,6 +381,14 @@ def BivarPolynomialOffset(coefList, dx, dy):
     raise ValueError("BivarPolynomialOffset degree %d is not supported yet" % N)
 
 
+def UtilStaticVars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+
+
 # It is expensive first time, so implement it as a function
 def UtilNumpyClippingValue(dtype):
     info = np.finfo(dtype=dtype)

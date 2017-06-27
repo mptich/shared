@@ -21,9 +21,9 @@ def UtilRandomSinFunc(shape, order, expectedStd, independentAxes=False):
     ret = np.zeros(shape=shape, dtype=np.float32)
     if not isinstance(order, tuple):
         order = tuple([order] * n)
-    coordTensor = UtilCartesianMatrix(*[range(x) for x in shape]) * angleMult
+    coordTensor = UtilCartesianMatrixDefault(*[x for x in shape]) * angleMult
     if not independentAxes:
-        orderSet = UtilCartesianMatrix(*[range(x+1) for x in order]).reshape(-1, n)[1:,:] # Exclude all 0s
+        orderSet = UtilCartesianMatrixDefault(*[x+1 for x in order]).reshape(-1, n)[1:,:] # Exclude all 0s
     else:
         orderSet = [((0,) * y + (x,) + (0,) * (n-y-1)) for y in range(n) for x in range(1,order[y]+1)]
     for multipliers in orderSet:
@@ -67,6 +67,24 @@ def UtilCartesianMatrix(arr1, arr2=None, arr3=None):
     elif arr3 is None:
         return UtilCartesianMatrix2d(arr1, arr2)
     return UtilCartesianMatrix3d(arr1, arr2, arr3)
+
+
+@UtilStaticVars(cached={})
+def UtilCartesianMatrixDefault(size1, size2=None, size3=None):
+    """
+    Returns potentially cached Cartesian matrix of range(size1), range(size2), range(size3)
+    """
+    tup = (size1, size2, size3)
+    if tup in UtilCartesianMatrixDefault.cached:
+        return UtilCartesianMatrixDefault.cached[tup]
+    if size2 is None:
+        ret = np.array(range(size1)).reshape(-1,1)
+    elif size3 is None:
+        ret = UtilCartesianMatrix2d(range(size1), range(size2))
+    else:
+        ret = UtilCartesianMatrix3d(range(size1), range(size2), range(size3))
+    UtilCartesianMatrixDefault.cached[tup] = ret
+    return ret
 
 
 def UtilReflectCoordTensor(map):
