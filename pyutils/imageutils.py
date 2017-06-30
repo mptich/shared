@@ -84,13 +84,16 @@ def UtilValidateBoundBox(shape, bb, margin=0):
             (yMax <= h-margin) and (xMax <= w-margin) and (yMin < yMax) and (xMin < xMax))
 
 
-def UtilVerticalScale(img, destHeight, destWidth, padValue=0, padMode='constant', interpMode='cubic'):
+def UtilVerticalScale(img, destHeight, destWidth, padValue=0, padMode='constant', interpMode='cubic', \
+                      horPlacement=None):
     """
     Scales image in such a way that it is fit by height, and width either cropped or padded
     :param img: input image
     :param destHeight: desired height
     :param destWidth: desired width
     :param padValue: in case of padding, what value to use
+    :param horPlacement: if not None, then it should be a floating in [0.,1.], determining how teh pictre is cropped
+                         horizontally; horPlacement==None is equivalent to hotPlacement=0.5
     :return: tuple (Scaled image, scale ratio, left pad)
     """
 
@@ -102,7 +105,10 @@ def UtilVerticalScale(img, destHeight, destWidth, padValue=0, padMode='constant'
     img = UtilImageResize(img, destHeight, realWidth, interp=interpMode)
 
     # See if padding / clipping is needed
-    leftPadWidth = (destWidth - realWidth) // 2
+    if horPlacement is None:
+        leftPadWidth = (destWidth - realWidth) // 2
+    else:
+        leftPadWidth = int(round((destWidth - realWidth) * horPlacement))
     rightPadWidth = destWidth - realWidth - leftPadWidth
     assert (leftPadWidth * rightPadWidth) >= 0
     if (leftPadWidth + rightPadWidth) > 0:
