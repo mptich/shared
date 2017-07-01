@@ -95,7 +95,7 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
     :return: list of exit codes from the processes
     """
     if parallelCount is None:
-        parallelCount = 2 * multiprocessing.cpu_count() # multiply by 2 in case some processes are waiting on fio
+        parallelCount = multiprocessing.cpu_count()
 
     if args is None:
         args = []
