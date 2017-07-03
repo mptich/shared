@@ -5,7 +5,7 @@ import sys
 from shared.pyutils.utils import *
 import tempfile
 import csv
-from multiprocessing import cpu_count, Process, Manager
+from multiprocessing import cpu_count, Process
 import importlib
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
