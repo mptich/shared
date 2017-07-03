@@ -5,35 +5,35 @@ import sys
 from shared.pyutils.utils import *
 import tempfile
 import csv
-import subprocess
-import multiprocessing
+from multiprocessing import cpu_count, Process, Manager
+import importlib
 
-def UtilFanMultiProcess(listProc, logFilePrefix=None):
+def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
+    if logFileName is not None:
+        sys.stdout = sys.stderr = open(logFileName, 'w')
+    func = getattr(importlib.import_module(moduleName), funcName)
+    func(*args)
+
+
+def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None):
     """
-    Launches prcesses listed in listProc
-    :param listProc: list of process command lines
+    Launches prcesses by calling func in different address space
+    :param moduleName: name of the module where this function resides
+    :param func: name of teh function function to call
+    :param listOfArgLists: list of lists containing arguments to call for the function
     :param logFilePrefix: prefix of teh log file; an ordinal is added to it, then ".txt"
     :return: list of exit codes
     """
     pList = []
-    fLogList = []
-    for index,pName in enumerate(listProc):
-        fLog = None
+    for index,argList in enumerate(listOfArgLists):
+        logFileName = None
         if logFilePrefix is not None:
             logFileName = logFilePrefix + ("%05d" % index) + ".txt"
-            fLog = open(logFileName, "w")
-            fLogList.append(fLog)
-        logFile = fLog if fLog is not None else subprocess.PIP
-        pList.append(subprocess.Popen(pName, shell=True, universal_newlines=True, \
-                                      stdout=logFile, stderr=logFile))
+        pList.append(Process(target=_fanMultiProcessCall, args=(moduleName, funcName, logFileName) + tuple(argList)))
 
     # Wait for all child processes to finish
-    exitCodes = [p.wait() for p in pList]
-    if logFilePrefix is not None:
-        for fLog in fLogList:
-            fLog.flush()
-            fLog.close()
-    return exitCodes
+    [p.wait() for p in pList]
+    return [p.exitcode for p in pList]
 
 
 class UtilMultiCsvWriter(UtilObject):
@@ -95,7 +95,7 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
     :return: list of exit codes from the processes
     """
     if parallelCount is None:
-        parallelCount = multiprocessing.cpu_count()
+        parallelCount = cpu_count()
 
     if args is None:
         args = []
@@ -115,11 +115,12 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
             sys.exit(0)
 
         # Start subprocesses
-        pList = []
+        listOfArgLists = []
         for fn in fileList:
-            pList.append("python3 -u %s %s %s %s" % (moduleName, funcName, fn, " ".join(args)))
+            l = [fn] + args
+            listOfArgLists.append(l)
 
-        exitCodes = UtilFanMultiProcess(pList, logFilePrefix=logFilePrefix)
+        exitCodes = UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=logFilePrefix)
         print ("Child processes exit codes %s" % str(exitCodes))
 
     finally:
