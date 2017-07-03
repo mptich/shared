@@ -10,7 +10,7 @@ import importlib
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
-        sys.stdout = sys.stderr = open(logFileName, 'w')
+        sys.stdout = sys.stderr = open(logFileName, 'w', 1)
     func = getattr(importlib.import_module(moduleName), funcName)
     func(*args)
 
@@ -32,7 +32,8 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
         pList.append(Process(target=_fanMultiProcessCall, args=(moduleName, funcName, logFileName) + tuple(argList)))
 
     # Wait for all child processes to finish
-    [p.wait() for p in pList]
+    [p.start() for p in pList]
+    [p.join() for p in pList]
     return [p.exitcode for p in pList]
 
 
