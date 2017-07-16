@@ -27,15 +27,15 @@ scipyVerMaj, scipyVerMin, _ = scipy.__version__.split(".")
 if (int(scipyVerMaj) == 0) and (int(scipyVerMin) < 14):
     raise Exception("SCIPY version %s, should be at least 0.14.0" % scipy.__version__)
 
-def UtilImageFileToArray(fileName):
+def UtilImageFileToArray(fileName, bgr=False):
     img = cv2.imread(fileName)
-    if (len(img.shape) == 3) and (img.shape[2] == 3):
+    if (not bgr) and (len(img.shape) == 3) and (img.shape[2] == 3):
         img = np.flip(img, axis=2)
     return UtilImageToFloat(img)
 
-def UtilArrayToImageFile(arr, fileName, jpgQuality=None):
+def UtilArrayToImageFile(arr, fileName, jpgQuality=None, bgr=False):
     arr = UtilImageToInt(arr)
-    if (len(arr.shape) == 3) and (arr.shape[2] == 3):
+    if (not bgr) and (len(arr.shape) == 3) and (arr.shape[2] == 3):
         arr = np.flip(arr, axis=2)
     if (jpgQuality is None) or (os.path.splitext(fileName)[1].lower() not in ('.jpg', '.jpeg')):
         cv2.imwrite(fileName, arr)
