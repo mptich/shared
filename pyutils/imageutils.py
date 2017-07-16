@@ -235,11 +235,12 @@ def UtilImageEdge(img):
     return np.array(img.filter(ImageFilter.FIND_EDGES))
 
 
-def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3):
+def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3, excludedReflRect=None):
     """
     Mapping image geometrically
     :param img: input image
     :param map: input map
+    :param excludedReflRect: if fillMethod='reflect', then this rectangle should not be mapped by the reflected area
     :return: new mapped image
     """
     h = img.shape[0]
@@ -261,7 +262,7 @@ def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3):
         fillMap = np.logical_and(fillMap, map[:, :, 1] > 0.)
         assert fillMap.shape == (h, w)
     elif fillMethod == "reflect":
-        map = UtilReflectCoordTensor(map)
+        map = UtilReflectCoordTensor(map, excludedArea=excludedReflRect)
     else:
         raise ValueError('Wrong value of fillMethod: %s' % fillMethod)
 

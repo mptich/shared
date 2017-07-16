@@ -87,11 +87,12 @@ def UtilCartesianMatrixDefault(size1, size2=None, size3=None):
     return ret
 
 
-def UtilReflectCoordTensor(map):
+def UtilReflectCoordTensor(map, excludedArea=None):
     """
     Takes a tensor with values representing mapping coordinates, and replaces out-of-range values
     with reflections from edges
     :param img:
+    :parameter excludeArea: if not None, then it denotes a rectangle that should not be mapped in thе reflection area
     :return:
     """
     def _reflectMap(singleVarMap, size):
@@ -101,8 +102,30 @@ def UtilReflectCoordTensor(map):
         return np.where(reflectMap, size - singleVarMap, singleVarMap)
     n = len(map.shape) - 1
     assert map.shape[n] == n
-    map = np.abs(map)
     shape = map.shape
     reshapedMap = map.reshape((-1, n))
-    return np.stack([_reflectMap(reshapedMap[:, i], shape[i]) for i in range(n)], axis=1).reshape(shape)
+
+    if excludedArea is not None:
+        reflArea = np.any( \
+            np.stack([np.logical_or(reshapedMap[:,i] < 0, reshapedMap[:,i] >= shape[i]) \
+            for i in range(n)], axis=1), axis=1).reshape(shape[:-1])
+
+    reshapedMap = np.abs(reshapedMap)
+    ret = np.stack([_reflectMap(reshapedMap[:, i], shape[i]) for i in range(n)], axis=1).reshape(shape)
+
+    if excludedArea is None:
+        return ret
+
+    minCoord = np.array(excludedArea[:n], dtype=np.float32)
+    maxCoord = np.array(excludedArea[n:], dtype=np.float32)
+    withinExclArea = np.logical_and(np.all(ret > minCoord, axis=n), np.all(ret <= maxCoord, axis=n))
+    exclusion = np.logical_and(reflArea, withinExclArea)
+    exclusion = np.repeat(exclusion, n).reshape(shape)
+    return np.where(exclusion, minCoord, ret)
+
+
+
+
+
+
 
