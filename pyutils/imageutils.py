@@ -235,7 +235,7 @@ def UtilImageEdge(img):
     return np.array(img.filter(ImageFilter.FIND_EDGES))
 
 
-def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3, excludedReflRect=None):
+def UtilRemapImage(img, map, fillMethod=None, fillValue=None, ky=3, kx=3):
     """
     Mapping image geometrically
     :param img: input image
@@ -256,13 +256,15 @@ def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3, 
 
     # Deal with the mapped values outside of the source image border
     fillMap = None
-    if fillMethod == "constant":
+    if fillMethod is None:
+        pass # No action
+    elif (fillMethod == "constant") or (fillMethod == "orig"):
         fillMap = np.logical_and(map[:, :, 0] <= float(h-1), map[:, :, 1] <= float(w-1))
         fillMap = np.logical_and(fillMap, map[:, :, 0] > 0.)
         fillMap = np.logical_and(fillMap, map[:, :, 1] > 0.)
         assert fillMap.shape == (h, w)
     elif fillMethod == "reflect":
-        map = UtilReflectCoordTensor(map, excludedArea=excludedReflRect)
+        map = UtilReflectCoordTensor(map)
     else:
         raise ValueError('Wrong value of fillMethod: %s' % fillMethod)
 
@@ -275,12 +277,16 @@ def UtilRemapImage(img, map, fillMethod="constant", fillValue=127., ky=3, kx=3, 
 
     if mono:
         newArr = f(yImgCoord, xImgCoord, grid=False).reshape((h,w))
-        if fillMap is not None:
+        if fillMethod == 'constant':
             newArr = np.where(fillMap, newArr, fillValue)
+        elif fillMethod == 'orig':
+            newArr = np.where(fillMap, newArr, img)
     else:
         newArr = [func(yImgCoord, xImgCoord, grid=False).reshape(h,w) for func in f]
-        if fillMap is not None:
+        if fillMethod == 'constant':
             newArr = [np.where(fillMap, arr, fillValue) for arr in newArr]
+        elif fillMethod == 'orig':
+            newArr = [np.where(fillMap, arr, img[:,:,ind]) for ind,arr in enumerate(newArr)]
         newArr = np.dstack(newArr)
 
     assert newArr.shape[:2] == (h,w)
