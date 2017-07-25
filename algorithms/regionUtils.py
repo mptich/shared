@@ -15,7 +15,7 @@ def UtilRegionBoundaries(mat, levelCount=1):
     :return: matrix with pixels on the boundary have ordinal numbers corresponding to their level, and non-border
     pixels are all 0
     """
-    assert np.issubdtype(mat.dtype, np.integer)
+    assert np.issubdtype(mat.dtype, np.integer) or np.issubdtype(mat.dtype, np.bool)
     matPadded = np.pad(mat, ((1,1), (1,1)), mode='symmetric')
     matShifted = UtilGenerate4WayShifted(matPadded)
     quadMat = np.repeat(mat[:,:,np.newaxis], 4, axis=2)

@@ -443,10 +443,10 @@ class ImageAnnot(UtilObject):
     def setBoundaryMask(self, img, colorExtern=(255,0,0), colorIntern=(0,255,0)):
         if isinstance(img, str):
             img = self.convertToGray(Image.open(img, "r"))
-            img = np.array(img) >= 128
         else:
             assert isinstance(img, np.ndarray)
             assert len(img.shape) == 2
+        img = (np.array(img) >= 128)
         boundaries = UtilRegionBoundaries(img)
         externalCoord = np.transpose(np.logical_and(boundaries, np.logical_not(img)).nonzero())
         externalCoord = np.flip(externalCoord, axis=1).flatten() # PIL requires x,y
