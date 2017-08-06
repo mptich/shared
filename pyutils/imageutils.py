@@ -27,10 +27,15 @@ scipyVerMaj, scipyVerMin, _ = scipy.__version__.split(".")
 if (int(scipyVerMaj) == 0) and (int(scipyVerMin) < 14):
     raise Exception("SCIPY version %s, should be at least 0.14.0" % scipy.__version__)
 
-def UtilImageFileToArray(fileName, bgr=False):
+def UtilImageFileToArray(fileName, bgr=False, exifOrient=False):
     img = cv2.imread(fileName)
     if (not bgr) and (len(img.shape) == 3) and (img.shape[2] == 3):
         img = np.flip(img, axis=2)
+    if exifOrient:
+        imgPil = Image.open(fileName)
+        exifDict = imgPil._getexif()
+        if exifDict is not None:
+            img = UtilImageExifOrient(img, exifDict)
     return UtilImageToFloat(img)
 
 def UtilArrayToImageFile(arr, fileName, jpgQuality=None, bgr=False):
@@ -151,6 +156,26 @@ def UtilImageResize(img, destHeight, destWidth, interp = 'cubic', asPicture = Tr
     img = cv2.resize(img, (destWidth, destHeight), interpolation=method)
     if asPicture:
         img = img.clip(min=0., max=255.)
+    return img
+
+@UtilStaticVars(rotateDict={1:(0,0,0), 2:(0,0,1), 3:(0,1,1), 4:(0,1,0), 5:(1,0,0), 6:(1,0,1), 7:(1,1,1), 8:(1,1,0)})
+def UtilImageExifOrient(img, exifTagsDict):
+    """
+    Rotates image according to what has been specified in the Exif structure
+    :param img: Original image
+    :param exifTagsDict: Exif structure
+    :return: rotated image
+    """
+    # 0x112 is the orientation tag
+    orientTuple = UtilImageExifOrient.rotateDict[exifTagsDict.get(0x112, 1)]
+    if orientTuple[0]:
+        axes = list(range(len(img.shape)))
+        axes[0], axes[1] = (axes[1], axes[0])
+        img = np.transpose(img, axes=axes)
+    if orientTuple[1]:
+        img = np.flip(img, axis=0)
+    if orientTuple[2]:
+        img = np.flip(img, axis=1)
     return img
 
 def UtilStitchImagesHor(imgInputList, outImageName=None, padMode='constant', constValue=127., seamsList=None):
