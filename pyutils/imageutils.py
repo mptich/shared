@@ -33,7 +33,8 @@ def UtilImageFileToArray(fileName, bgr=False, exifOrient=False):
         img = np.flip(img, axis=2)
     if exifOrient:
         imgPil = Image.open(fileName)
-        exifDict = imgPil._getexif()
+        func = getattr(imgPil, '_getexif', lambda: None)
+        exifDict = func()
         if exifDict is not None:
             img = UtilImageExifOrient(img, exifDict)
     return UtilImageToFloat(img)
