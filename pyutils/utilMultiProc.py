@@ -190,6 +190,7 @@ class UtilParallelFixedWriter(UtilObject):
                                        'append': append, 'postProcessCommand': postProcessCommand})
         self.process.start()
         self.currentBuffer ^= 1
+        self.bufPos = 0
 
     def close(self):
         self.waitForProc()
@@ -204,4 +205,3 @@ class UtilParallelFixedWriter(UtilObject):
         if postProcessCommand is not None:
             args = shlex.split(postProcessCommand)
             subprocess.Popen(args)
-
