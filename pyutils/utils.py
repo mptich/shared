@@ -12,6 +12,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
 import errno
+import functools
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -430,6 +431,24 @@ def UtilSafeMultiGlob(listOfPatterns):
 class UtilWrapper:
     def __init__(self, val):
         self.value = val
+
+
+def UtilNumpyEntryItemSize(typeShapeTuple):
+    """
+    Calculates size of a numpy object
+    :param typeShapeTuple: (numpy type, numpy shape)
+    :return: size
+    """
+    return np.dtype(typeShapeTuple[0]).itemsize * functools.reduce(lambda x, y: x*y, list(typeShapeTuple[1]))
+
+
+def UtilNumpyEntriesSize(typeShapeList):
+    """
+    Calculates size of several numpy objects
+    :param typeShapeList: list of tuples (numpy type, numpy shape)
+    :return: size
+    """
+    return sum([UtilNumpyEntryItemSize(x) for x in typeShapeList])
 
 
 

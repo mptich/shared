@@ -5,8 +5,10 @@ import sys
 from shared.pyutils.utils import *
 import tempfile
 import csv
-from multiprocessing import cpu_count, Process
+from multiprocessing import cpu_count, Process, Array
 import importlib
+import shlex
+import subprocess
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
@@ -131,4 +133,75 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
             os.remove(fn)
 
     return exitCodes
+
+
+class UtilParallelFixedWriter(UtilObject):
+    """
+    Writing to a file from a parallel process
+    """
+
+    def __init__(self, typeShapeList, entryCount=1):
+        """
+        :param typeShapeList: list of tuples describing one entry to write: (Numpy type, numpy shape)
+        :param entryCount: how many times typeShapeList entries will be repeated
+        """
+        self.typeShapeList = typeShapeList
+        self.size = UtilNumpyEntriesSize(typeShapeList) * entryCount
+        self.buffers = []
+        for _ in range(2):
+            self.buffers.append(Array('B', self.size, lock=False))
+        self.currentBuffer = 0
+        self.bufPos = 0
+        self.process = None
+
+    def addRecord(self, arr):
+        """
+        Adds a record, as a numpy array
+        :param arr: numpy array
+        :return: True if buffer is full, False otherwise
+        """
+        entrySize = UtilNumpyEntryItemSize((arr.dtype, arr.shape))
+        assert self.bufPos + entrySize <= self.size
+        self.buffers[self.currentBuffer][self.bufPos:self.bufPos + entrySize] = arr.tostring()
+        self.bufPos += entrySize
+        return self.bufPos == self.size
+
+    def addRecordList(self, arrList):
+        """
+        Same as addRecord(), but adds all records from the list
+        :param arrList:
+        :return:
+        """
+        for arr in arrList:
+            self.addRecord(arr)
+        return self.bufPos == self.size
+
+    def waitForProc(self):
+        if self.process is not None:
+            self.process.join()
+            if self.process.exitcode != 0:
+                raise IOError('Process writing to %s ecxitcode %d' % (self.fileName, self.process.exitcode))
+
+    def write(self, fileName, append=False, postProcessCommand=None):
+        self.waitForProc()
+        self.fileName = fileName
+        self.process = Process(target=self.worker,
+                               kwargs={'fileName': fileName, 'array': self.buffers[self.currentBuffer], \
+                                       'append': append, 'postProcessCommand': postProcessCommand})
+        self.process.start()
+        self.currentBuffer ^= 1
+
+    def close(self):
+        self.waitForProc()
+
+    @staticmethod
+    def worker(fileName, array, append, postProcessCommand):
+        path, _ = os.path.split(fileName)
+        UtilSafeMkdir(path)
+        mode = 'ab' if append else 'wb'
+        with open(fileName, mode) as f:
+            f.write(array)
+        if postProcessCommand is not None:
+            args = shlex.split(postProcessCommand)
+            subprocess.Popen(args)
 
