@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2015-2017  Author: Misha Orel
 #
-# # This program is free software: you can redistribute it and/or modify
+# This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
@@ -356,7 +356,11 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
         count = shape[2]
         if count == 1:
             mat = np.reshape(mat, shape[:2])
-    if (count > 3) or (count == 0):
+    if count == 4:
+        # Remove alpha channel
+        mat = mat[:, :, :3]
+        count = 3
+    if count not in (1, 3):
         raise ValueError("UtilDbgMatrixToImage wrong last dimension %d" % count)
 
     if count == 2:

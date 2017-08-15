@@ -2,53 +2,76 @@
 
 # Removes temporary code under JUSTATEMPs
 
+# Copyright (C) 2014-2017  Author: Misha Orel
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 import sys
 
 state = "normal"
 
 line_list = []
 
+
 def emit_uncommented(l):
-  tl = l.strip()
-  if (tl[0] != "#") and (tl[0:2] != "//"):
-    print "Line expected to be commented: ", l
-    sys.exit(1)
-  if (tl[0] == "#"):
-    str = "#"
-  else:
-    str = "//"
-  index = l.find(str)
-  print l[0:index] + l[(index + len(str)) : ]
+    tl = l.strip()
+    if (tl[0] != "#") and (tl[0:2] != "//"):
+        print
+        "Line expected to be commented: ", l
+        sys.exit(1)
+    if (tl[0] == "#"):
+        str = "#"
+    else:
+        str = "//"
+    index = l.find(str)
+    print
+    l[0:index] + l[(index + len(str)):]
+
 
 def emit(type):
-  global line_list, state
-  for l in line_list:
-    if state == "normal":
-      print l
-    elif state == "uncomment":
-      emit_uncommented(l)
-    if type == "single":
-      state = "normal"
-  line_list = []
+    global line_list, state
+    for l in line_list:
+        if state == "normal":
+            print
+            l
+        elif state == "uncomment":
+            emit_uncommented(l)
+        if type == "single":
+            state = "normal"
+    line_list = []
+
 
 for l in sys.stdin:
-  l = l.rstrip("\n")
-  tl = l.strip()
-  if (tl[0:10] == "#JUSTATEMP") or (l[0:11] == "//JUSTATEMP"):
-    if (tl[0:14] == "#JUSTATEMP END") or (l[0:15] == "//JUSTATEMP END"):
-      emit("all")
-      state = "normal"
+    l = l.rstrip("\n")
+    tl = l.strip()
+    if (tl[0:10] == "#JUSTATEMP") or (l[0:11] == "//JUSTATEMP"):
+        if (tl[0:14] == "#JUSTATEMP END") or (l[0:15] == "//JUSTATEMP END"):
+            emit("all")
+            state = "normal"
+        else:
+            if state != "normal":
+                emit("single")
+            if tl.find("uncom") != -1:
+                state = "uncomment"
+            else:
+                state = "remove"
     else:
-      if state != "normal":
-        emit("single")
-      if tl.find("uncom") != -1:
-        state = "uncomment"
-      else:
-        state = "remove"
-  else:
-    if state == "normal":
-      print l
-    else: 
-      line_list.append(l)
+        if state == "normal":
+            print
+            l
+        else:
+            line_list.append(l)
 
 emit("single")
