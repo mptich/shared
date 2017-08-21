@@ -66,6 +66,23 @@ class HeatMapHelper(UtilObject):
             return HeatMap(sum(lData))
         return HeatMap(np.zeros((self.height, self.width), dtype=np.float32))
 
+    def displayMultiple(self, fileName, colorDict):
+        """
+        Saves several superimposed heatmaps as an image
+        :param colorDict: dictionary in form {'r': [list of red heatmaps], 'g': ..., 'b': ...}
+        :param fileName: saves file name
+        :return:
+        """
+        img = np.zeros((self.height, self.width, 3), dtype=np.float32)
+        for ind, key in enumerate(('r', 'g', 'b')):
+            for hmap in colorDict.get(key, []):
+                maxVal = np.max(hmap)
+                maxVal = max(maxVal, UtilNumpyClippingValue(np.float32))
+                img[:,:,ind] += hmap / maxVal
+
+        maxVals = np.max(img, axis=(0,1)).clip(min=UtilNumpyClippingValue(np.float32))
+        img = img * np.reciprocal(maxVals) * 255.0
+        UtilArrayToImageFile(img, fileName)
 
 
 class HeatMap(UtilObject):
@@ -73,6 +90,7 @@ class HeatMap(UtilObject):
 
     def __init__(self, arr):
         # Normalize
+        assert np.min(arr) >= 0.
         self.weight = np.sum(arr)
         area = arr.shape[0] * arr.shape[1]
         if self.weight > self.clippingValue * area:
@@ -104,6 +122,18 @@ class HeatMap(UtilObject):
         byY *= byY
         byX *= byX
         return (np.sqrt(np.sum(sqData * byY)), np.sqrt(np.sum(sqData * byX)))
+
+    def display(self, fileName):
+        assert self.valid
+        maxVal = np.max(self.data)
+        dispMap = self.data / maxVal
+        def _colorMap(lower, upper, dispMap):
+            return ((dispMap - lower) / (upper - lower) * 255.).clip(min=0., max=255.)
+        blue = _colorMap(0., 0.11, dispMap)
+        red = _colorMap(0.11, 0.41, dispMap)
+        green = _colorMap(0.41, 1.0, dispMap)
+        img = np.stack([red, green, blue], axis=2)
+        UtilArrayToImageFile(img, fileName)
 
     def getData(self):
         # Valid or not

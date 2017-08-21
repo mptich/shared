@@ -127,4 +127,11 @@ def UtilReflectCoordTensor(map):
     return UtilReflectCoordTensorWithExclusion(map)[0]
 
 
+def UtilAvg2DPointsDistance(pts1, pts2):
+    assert pts1.shape == pts2.shape
+    assert pts1.shape[-1] == 2
+    pointCount = functools.reduce(lambda x, y: x*y, pts1.shape[:-1])
+    diff = pts1 - pts2
+    return np.sum(np.sqrt(np.sum(diff * diff, axis=-1))) / pointCount
+
 

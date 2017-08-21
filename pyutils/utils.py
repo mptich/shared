@@ -28,6 +28,8 @@ import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
 import errno
 import functools
+from dateutil import parser as DateParser
+from datetime import datetime
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -454,7 +456,7 @@ def UtilNumpyEntryItemSize(typeShapeTuple):
     :param typeShapeTuple: (numpy type, numpy shape)
     :return: size
     """
-    return np.dtype(typeShapeTuple[0]).itemsize * functools.reduce(lambda x, y: x*y, list(typeShapeTuple[1]))
+    return np.dtype(typeShapeTuple[0]).itemsize * functools.reduce(lambda x, y: x*y, typeShapeTuple[1])
 
 
 def UtilNumpyEntriesSize(typeShapeList):
@@ -464,6 +466,21 @@ def UtilNumpyEntriesSize(typeShapeList):
     :return: size
     """
     return sum([UtilNumpyEntryItemSize(x) for x in typeShapeList])
+
+
+@UtilStaticVars(epochStart=datetime.utcfromtimestamp(0))
+def UtilAsciiTstampToSec(asciiTstamp):
+    """
+    Translates ASCII timestamp to fractional seconds since 1970
+    :param asciiTstamp:
+    :return:
+    """
+    return (DateParser.parse(asciiTstamp) - UtilAsciiTstampToSec.epochStart).total_seconds()
+
+
+def UtilAsciiTstampToMsec(asciiTstamp):
+    return np.int64(UtilAsciiTstampToSec(asciiTstamp) * 1000)
+
 
 
 
