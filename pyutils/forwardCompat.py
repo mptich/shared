@@ -22,6 +22,7 @@ from __future__ import division
 
 import sys
 import platform
+import re
 usingVersion3 = (sys.version_info[0] == 3)
 
 if not usingVersion3:
@@ -37,3 +38,15 @@ np.seterr(all='raise')
 
 def ThisIsWindows():
     return platform.system().lower() == 'windows'
+
+def VersionCompare(v1, v2):
+    def _normalize(v):
+        return [int(x) for x in re.sub(r'(\.0+)*$', '', v).split(".")]
+    def _compare(x1, x2):
+        if x1 > x2:
+            return 1
+        elif x1 < x2:
+            return -1
+        else:
+            return 0
+    return _compare(_normalize(v1), _normalize(v2))

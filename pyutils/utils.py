@@ -478,6 +478,13 @@ def UtilAsciiTstampToSec(asciiTstamp):
     return (DateParser.parse(asciiTstamp) - UtilAsciiTstampToSec.epochStart).total_seconds()
 
 
+def UtilCartesianToPolar(arr):
+    assert arr.shape[-1] == 2
+    flatArr = arr.reshape(-1, 2)
+    return np.stack([np.linalg.norm(arr, axis=-1), np.arctan2(flatArr[:,0],flatArr[:,1]).reshape(arr.shape[:-1])],
+                    axis=-1)
+
+
 def UtilAsciiTstampToMsec(asciiTstamp):
     return np.int64(UtilAsciiTstampToSec(asciiTstamp) * 1000)
 

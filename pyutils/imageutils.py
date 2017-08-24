@@ -20,6 +20,10 @@ import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
 from shared.pyutils.tensorutils import *
 from shared.algorithms.regionUtils import *
+import PIL
+_minPilVersion = '3.1'
+if forwardCompat.VersionCompare(PIL.__version__, _minPilVersion) < 0:
+    ValueError('OLD PIL VERSION %s, should be at least %s' % (PIL.__version__, _minPilVersion))
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageChops
@@ -27,6 +31,9 @@ from PIL import ImageFilter
 import scipy.ndimage.filters as scipyFilters
 from scipy import interpolate
 import scipy
+_minScipyVersion = '0.14.0'
+if forwardCompat.VersionCompare(scipy.__version__, _minScipyVersion) < 0:
+    ValueError('OLD SCIPY VERSION %s, should be at least %s' % (scipy.__version__, _minScipyVersion))
 import math
 import sys
 from sklearn import linear_model
@@ -36,12 +43,12 @@ import operator
 import collections
 import csv
 import cv2
+_ExifHandledByCv2 = forwardCompat.VersionCompare(cv2.__version__, '3.1') >= 0
 
-scipyVerMaj, scipyVerMin, _ = scipy.__version__.split(".")
-if (int(scipyVerMaj) == 0) and (int(scipyVerMin) < 14):
-    raise Exception("SCIPY version %s, should be at least 0.14.0" % scipy.__version__)
 
 def UtilImageFileToArray(fileName, bgr=False, exifOrient=False):
+    if _ExifHandledByCv2:
+        exifOrient = False
     img = cv2.imread(fileName)
     if (not bgr) and (len(img.shape) == 3) and (img.shape[2] == 3):
         img = np.flip(img, axis=2)
