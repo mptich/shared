@@ -138,5 +138,3 @@ class HeatMap(UtilObject):
     def getData(self):
         # Valid or not
         return np.copy(self.data)
-
-

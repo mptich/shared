@@ -30,6 +30,7 @@ import errno
 import functools
 from dateutil import parser as DateParser
 from datetime import datetime
+import time
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -478,15 +479,20 @@ def UtilAsciiTstampToSec(asciiTstamp):
     return (DateParser.parse(asciiTstamp) - UtilAsciiTstampToSec.epochStart).total_seconds()
 
 
-def UtilCartesianToPolar(arr):
-    assert arr.shape[-1] == 2
-    flatArr = arr.reshape(-1, 2)
-    return np.stack([np.linalg.norm(arr, axis=-1), np.arctan2(flatArr[:,0],flatArr[:,1]).reshape(arr.shape[:-1])],
-                    axis=-1)
-
-
 def UtilAsciiTstampToMsec(asciiTstamp):
     return np.int64(UtilAsciiTstampToSec(asciiTstamp) * 1000)
+
+
+def UtilSecToAsciiTstamp(seconds):
+    fractSec = seconds % 1
+    s = time.strftime('%m-%d-%Y %H:%M:%S', time.gmtime(int(seconds)))
+    fractStr = '.' + ('%06u' % int(fractSec * 1000000))
+    return s + fractStr
+
+
+def UtilMsecToAsciiTstamp(ms):
+    return UtilSecToAsciiTstamp(ms / 1000.)
+
 
 
 

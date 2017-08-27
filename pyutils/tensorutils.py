@@ -135,3 +135,34 @@ def UtilAvg2DPointsDistance(pts1, pts2):
     return np.sum(np.sqrt(np.sum(diff * diff, axis=-1))) / pointCount
 
 
+def UtilNumpyRle(arr):
+    """
+    Numpy RLE algo
+    :param arr: 1 dimensional array
+    :return: tuple: start/end indexes of flat intervals, values at those intervals
+    """
+    assert len(arr.shape) == 1
+    length = arr.shape[0]
+    if length < 2:
+        return (None, None)
+    changes = np.where(arr[1:] != arr[:-1])[0]
+    values = arr[changes]
+    changes += 1
+    intervals = np.stack([np.append(0, changes), np.append(changes, length)], axis=1).astype(np.int)
+    return (intervals, values)
+
+
+def UtilCartesianToPolar(arr):
+    assert arr.shape[-1] == 2
+    flatArr = arr.reshape(-1, 2)
+    return np.stack([np.linalg.norm(arr, axis=-1), np.arctan2(flatArr[:,0],flatArr[:,1]).reshape(arr.shape[:-1])],
+                    axis=-1)
+
+
+def UtilPolarToCartesian(arr):
+    assert arr.shape[-1] == 2
+    flatArr = arr.reshape(-1, 2)
+    amp = flatArr[:,0]
+    angle = flatArr[:,1]
+    return np.stack([amp * np.sin(angle), amp * np.cos(angle)], axis=1).reshape(arr.shape)
+
