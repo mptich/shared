@@ -410,6 +410,51 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     return img
 
 
+def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0, fileName=None):
+    """
+    Combines 2 greyscale iamges into one (green and red colors)
+    :param gImg: green image
+    :param rImg: red image
+    :param ginterval: tuple min and max values of green image (might be ndarray by axis)
+    :param rInterval: tuple min and max values of red image (might be ndarray by axis)
+    :param fileName:
+    :return:
+    """
+    assert gImg.shape == rImg.shape
+    assert len(gImg.shape) == 2
+
+    def _scale(img, interval):
+        if interval is None:
+            minVal = np.min(img)
+            maxVal = np.max(img)
+        else:
+            minVal, maxVal = interval
+
+        def _reformatClippers(clipVal):
+            if np.isscalar(clipVal):
+                clipVal = np.array([[clipVal]])
+            elif axis == 0:
+                clipVal = clipVal.reshape((img.shape[0],1))
+            else:
+                assert axis == 1
+            return clipVal
+
+        minVal = _reformatClippers(minVal)
+        maxVal = _reformatClippers(maxVal)
+        diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(img.dtype))
+        recipDiff = np.reciprocal(diff)
+        img = (img - minVal) * recipDiff
+        return (img * 255.).astype(np.uint8).clip(min=0, max=255)
+
+    gImg = _scale(gImg, gInterval)
+    rImg = _scale(rImg, rInterval)
+    bImg = np.ndarray(shape=gImg.shape, dtype=np.uint8)
+    bImg.fill(255)
+    img = np.stack([rImg, gImg, bImg], axis=2)
+    if fileName is not None:
+        UtilArrayToImageFile(img, fileName)
+    return img
+
 
 class ImageAnnot(UtilObject):
     """

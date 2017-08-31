@@ -268,42 +268,21 @@ class UtilMultiFile(UtilObject):
                 self.xactCount else 0)
 
 
-def UtilDrawHistogram(inputList = None, show = True, bwFactor = None, saveFile = None):
+def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCounts=False):
     if inputList is None:
         if show:
             plt.show()
         return
-    input = np.array(sorted(inputList))
-    gkde = None
-    start = input[0]
-    stop = input[-1]
-    if start != stop:
-        step = (stop - start) / 200.
-        if bwFactor:
-            bandwidth = (stop - start) / bwFactor
-        else:
-            bandwidth = 'silverman'
-    else:
-        start = start - 1
-        stop = start + 1
-        step = 1.0
-        bandwidth = 1.0
-    try:
-        gkde = stats.gaussian_kde(input, bw_method=bandwidth)
-    except:
-        print ("gaussian_kde failed on list %s" % repr(inputList))
-    if gkde:
-        xCoord = np.arange(start, stop, step)
-        try:
-            yCoord = gkde.evaluate(xCoord)
-        except FloatingPointError as ex:
-            print('UtilDrawHistogram: xCoord=%s: %s' % (str(xCoord), str(ex)))
-            return
-        plt.plot(xCoord, yCoord)
-        if show:
-            plt.show()
-        if saveFile is not None:
-            plt.savefig(saveFile)
+
+    hist, binEdges = np.histogram(inputList, bins=bins)
+    if logCounts:
+        hist = np.log(np.array(hist) + 1)
+    plt.plot(binEdges[:-1], hist)
+    if show:
+        plt.show()
+    if saveFile is not None:
+        plt.savefig(saveFile)
+
 
 def UtilCloseHistogram():
     plt.close()
