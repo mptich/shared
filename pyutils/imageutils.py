@@ -875,6 +875,8 @@ class BoundingBox(UtilObject):
             image = image > 128
         ysWithPoints = np.any(image, axis=1)
         xsWithPoints = np.any(image, axis=0)
+        if not (np.any(ysWithPoints) or np.any(xsWithPoints)):
+            return
         yMin, yMax = np.where(ysWithPoints)[0][[0, -1]] + [0,1]
         xMin, xMax = np.where(xsWithPoints)[0][[0, -1]] + [0,1]
         self.accomodate([yMin, xMin, yMax, xMax])
