@@ -50,6 +50,8 @@ def UtilImageFileToArray(fileName, bgr=False, exifOrient=False):
     if _ExifHandledByCv2:
         exifOrient = False
     img = cv2.imread(fileName)
+    if img is None:
+        return None
     if (not bgr) and (len(img.shape) == 3) and (img.shape[2] == 3):
         img = np.flip(img, axis=2)
     if exifOrient:
