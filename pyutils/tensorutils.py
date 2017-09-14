@@ -132,8 +132,10 @@ def UtilAvg2DPointsDistance(pts1, pts2):
     assert pts1.shape[-1] == 2
     pointCount = functools.reduce(lambda x, y: x*y, pts1.shape[:-1])
     diff = pts1 - pts2
-    return np.sum(np.sqrt(np.sum(diff * diff, axis=-1))) / pointCount
-
+    sqDist = np.sum(diff * diff, axis=-1)
+    meanDist = np.mean(np.sqrt(sqDist))
+    sigmaDist = np.sqrt(np.mean(sqDist))
+    return (meanDist, sigmaDist)
 
 def UtilNumpyRle(arr):
     """

@@ -473,6 +473,12 @@ def UtilMsecToAsciiTstamp(ms):
     return UtilSecToAsciiTstamp(ms / 1000.)
 
 
+@UtilStaticVars(epochStart=datetime.utcfromtimestamp(0))
+def UtilMsecTstamp():
+    tstamp = datetime.utcnow()
+    int((tstamp - UtilMsecTstamp.epochStart).total_seconds() * 1000)
+
+
 
 
 
