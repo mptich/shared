@@ -28,9 +28,6 @@ import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
 import errno
 import functools
-from dateutil import parser as DateParser
-from datetime import datetime
-import time
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -423,8 +420,7 @@ def UtilSafeMultiGlob(listOfPatterns):
         yield name
 
 
-# Wrapper for primitive values, so they can be returned as
-# writable pointers from a list
+# Wrapper for primitive values
 class UtilWrapper:
     def __init__(self, val):
         self.value = val
@@ -448,35 +444,6 @@ def UtilNumpyEntriesSize(typeShapeList):
     return sum([UtilNumpyEntryItemSize(x) for x in typeShapeList])
 
 
-@UtilStaticVars(epochStart=datetime.utcfromtimestamp(0))
-def UtilAsciiTstampToSec(asciiTstamp):
-    """
-    Translates ASCII timestamp to fractional seconds since 1970
-    :param asciiTstamp:
-    :return:
-    """
-    return (DateParser.parse(asciiTstamp) - UtilAsciiTstampToSec.epochStart).total_seconds()
-
-
-def UtilAsciiTstampToMsec(asciiTstamp):
-    return np.int64(UtilAsciiTstampToSec(asciiTstamp) * 1000)
-
-
-def UtilSecToAsciiTstamp(seconds):
-    fractSec = seconds % 1
-    s = time.strftime('%m-%d-%Y %H:%M:%S', time.gmtime(int(seconds)))
-    fractStr = '.' + ('%06u' % int(fractSec * 1000000))
-    return s + fractStr
-
-
-def UtilMsecToAsciiTstamp(ms):
-    return UtilSecToAsciiTstamp(ms / 1000.)
-
-
-@UtilStaticVars(epochStart=datetime.utcfromtimestamp(0))
-def UtilMsecTstamp():
-    tstamp = datetime.utcnow()
-    int((tstamp - UtilMsecTstamp.epochStart).total_seconds() * 1000)
 
 
 
