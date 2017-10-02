@@ -1,4 +1,19 @@
 # Utilities for multidimensional arrays
+#
+# Copyright (C) 2008-2017  Author: Misha Orel
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 __author__ = "Misha Orel"
 
@@ -141,16 +156,16 @@ def UtilNumpyRle(arr):
     """
     Numpy RLE algo
     :param arr: 1 dimensional array
-    :return: tuple: start/end indexes of flat intervals, values at those intervals
+    :return: tuple: start/end index of flat intervals, values at those intervals
     """
     assert len(arr.shape) == 1
     length = arr.shape[0]
     if length < 2:
         return (None, None)
     changes = np.where(arr[1:] != arr[:-1])[0]
+    changes = np.append(0, changes + 1)
     values = arr[changes]
-    changes += 1
-    intervals = np.stack([np.append(0, changes), np.append(changes, length)], axis=1).astype(np.int)
+    intervals = np.stack([changes, np.append(changes[1:], length) - 1], axis=1).astype(np.int)
     return (intervals, values)
 
 

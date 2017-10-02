@@ -20,6 +20,7 @@ from dateutil import parser as DateParser
 from datetime import datetime
 import time
 from shared.pyutils.utils import *
+from shared.pyutils.tensorutils import UtilNumpyRle
 
 
 @UtilStaticVars(epochStart=datetime.utcfromtimestamp(0))
@@ -29,6 +30,9 @@ def UtilAsciiTstampToSec(asciiTstamp):
     :param asciiTstamp:
     :return:
     """
+    # Sometimes % or _ is used as a separator between date and time
+    asciiTstamp = asciiTstamp.replace('%', ' ')
+    asciiTstamp = asciiTstamp.replace('_', ' ')
     return (DateParser.parse(asciiTstamp) - UtilAsciiTstampToSec.epochStart).total_seconds()
 
 
@@ -51,5 +55,18 @@ def UtilMsecToAsciiTstamp(ms):
 def UtilMsecTstamp():
     tstamp = datetime.utcnow()
     int((tstamp - UtilMsecTstamp.epochStart).total_seconds() * 1000)
+
+
+def UtilTimedRle(data, timeStamps):
+    """
+    Produces run length encoding lists with timestamps
+    See UtilNumpyRle
+    :param data: data to RLE
+    :param timeStamps: timestamps in any time units
+    :return:
+    """
+    intervals, values = UtilNumpyRle(data)
+    intervals = [(timeStamps[start], timeStamps[stop]) for start, stop in intervals]
+    return (intervals, values)
 
 
