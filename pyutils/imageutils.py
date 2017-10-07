@@ -430,7 +430,11 @@ def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0
             minVal = np.min(img)
             maxVal = np.max(img)
         else:
-            minVal, maxVal = interval
+            if isinstance(interval, tuple):
+                minVal, maxVal = interval
+            else:
+                maxVal = interval
+                minVal = np.zeros(maxVal.shape, maxVal.dtype)
 
         def _reformatClippers(clipVal):
             if np.isscalar(clipVal):
@@ -456,6 +460,11 @@ def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0
     if fileName is not None:
         UtilArrayToImageFile(img, fileName)
     return img
+
+
+def UtilDbg1GrayscaleToImage(img, interval=None, axis=0, fileName=None):
+    return UtilDbg2GrayscalesToImage(gImg=img, rImg=img, gInterval=interval, rInterval=interval,
+                                    axis=axis, fileName=fileName)
 
 
 class ImageAnnot(UtilObject):
