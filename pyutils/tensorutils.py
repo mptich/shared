@@ -19,6 +19,7 @@ __author__ = "Misha Orel"
 
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
+import cv2
 
 
 def UtilRandomSinFunc(shape, order, expectedStd, independentAxes=False):
@@ -167,6 +168,22 @@ def UtilNumpyRle(arr):
     values = arr[changes]
     intervals = np.stack([changes, np.append(changes[1:], length) - 1], axis=1).astype(np.int)
     return (intervals, values)
+
+
+def UtilImageCentroid(image):
+    m = cv2.moments(image)
+    area = m['m00'] + UtilNumpyClippingValue(np.float32)
+    return (m['m01']/area, m['m10']/area)
+
+
+def UtilImageCovarMatrix(image):
+    """
+    :param image:
+    :return: returns centralized normalized moments
+    """
+    m = cv2.moments(image)
+    area = m['m00'] + UtilNumpyClippingValue(np.float32)
+    return (m['mu02']/area, m['mu11']/area, m['mu20']/area)
 
 
 def UtilCartesianToPolar(arr):

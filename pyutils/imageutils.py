@@ -342,12 +342,6 @@ def UtilRemapImage(img, map, fillMethod=None, fillValue=None, ky=3, kx=3):
     return newArr.clip(min=0., max=255.)
 
 
-def UtilImageCentroid(image):
-    m = cv2.moments(image)
-    area = m['m00'] + UtilNumpyClippingValue(np.float32)
-    return (m['m01']/area, m['m10']/area)
-
-
 def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
     """
     Mostly for debug purposes: convert "arbitrary" marix to an image array
