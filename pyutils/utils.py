@@ -384,12 +384,6 @@ def UtilStaticVars(**kwargs):
     return decorate
 
 
-# It is expensive first time, so implement it as a function
-def UtilNumpyClippingValue(dtype):
-    info = np.finfo(dtype=dtype)
-    return info.tiny * 10.
-
-
 def UtilSafeMkdir(dirName):
     """
     If several processes are trying to create a directory simultaneously, it might cause a race condition.
@@ -425,23 +419,6 @@ class UtilWrapper:
     def __init__(self, val):
         self.value = val
 
-
-def UtilNumpyEntryItemSize(typeShapeTuple):
-    """
-    Calculates size of a numpy object
-    :param typeShapeTuple: (numpy type, numpy shape)
-    :return: size
-    """
-    return np.dtype(typeShapeTuple[0]).itemsize * functools.reduce(lambda x, y: x*y, typeShapeTuple[1])
-
-
-def UtilNumpyEntriesSize(typeShapeList):
-    """
-    Calculates size of several numpy objects
-    :param typeShapeList: list of tuples (numpy type, numpy shape)
-    :return: size
-    """
-    return sum([UtilNumpyEntryItemSize(x) for x in typeShapeList])
 
 
 

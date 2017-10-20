@@ -200,3 +200,44 @@ def UtilPolarToCartesian(arr):
     angle = flatArr[:,1]
     return np.stack([amp * np.sin(angle), amp * np.cos(angle)], axis=1).reshape(arr.shape)
 
+
+# It is expensive first time, so implement it as a function
+def UtilNumpyClippingValue(dtype):
+    info = np.finfo(dtype=dtype)
+    return info.tiny * 10.
+
+
+def UtilNumpyEntryItemSize(typeShapeTuple):
+    """
+    Calculates size of a numpy object
+    :param typeShapeTuple: (numpy type, numpy shape)
+    :return: size
+    """
+    return np.dtype(typeShapeTuple[0]).itemsize * functools.reduce(lambda x, y: x*y, typeShapeTuple[1])
+
+
+def UtilNumpyEntriesSize(typeShapeList):
+    """
+    Calculates size of several numpy objects
+    :param typeShapeList: list of tuples (numpy type, numpy shape)
+    :return: size
+    """
+    return sum([UtilNumpyEntryItemSize(x) for x in typeShapeList])
+
+
+def UtilRandomOptimChoice(array, selectCount):
+    """
+    Selects randomly from the array, providing the most uniform selection possible
+    :param array: 1D array
+    :param selectCount: how many entries to select
+    :return: array of siz eselectCount
+    """
+    assert len(array.shape) == 1
+    repeatCount = selectCount // array.shape[0]
+    resCount = selectCount % array.shape[0]
+    ret = np.repeat(array, repeatCount)
+    ret = np.append(ret, np.random.choice(array, size = resCount, replace = False))
+    return np.random.permutation(ret)
+
+
+
