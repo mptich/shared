@@ -424,6 +424,34 @@ def UtilGetModuleDir(name):
     return os.path.normpath(os.path.split(sys.modules[name].__file__)[0])
 
 
+class UtilSimpleLinkedList(UtilObject):
+    """
+    Works for any object with prev / next attributes reserved for this list (simpler and faster than using Node,
+    but unusable if an object is in > 1 linked list)
+    """
+
+    def __init__(self):
+        self.head = None
+        self.tail = None
+
+    def append(self, obj):
+        temp, self.tail = (self.tail, obj)
+        obj.next = None
+        obj.prev = temp
+        if temp is not None:
+            temp.next = obj
+
+    def dequeue(self, obj):
+        if obj.next is not None:
+            obj.next.prev = obj.prev
+        else:
+            self.tail = obj.prev
+        if obj.prev is not None:
+            obj.prev.next = obj.next
+        else:
+            self.head = obj.next
+
+
 # Wrapper for primitive values
 class UtilWrapper:
     def __init__(self, val):
