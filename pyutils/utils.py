@@ -433,8 +433,10 @@ class UtilSimpleLinkedList(UtilObject):
     def __init__(self):
         self.head = None
         self.tail = None
+        self._count = 0
 
     def append(self, obj):
+        self._count += 1
         temp, self.tail = (self.tail, obj)
         obj.next = None
         obj.prev = temp
@@ -450,6 +452,10 @@ class UtilSimpleLinkedList(UtilObject):
             obj.prev.next = obj.next
         else:
             self.head = obj.next
+        self._count -= 1
+
+    def count(self):
+        return self._count
 
 
 # Wrapper for primitive values
