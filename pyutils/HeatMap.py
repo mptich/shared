@@ -88,9 +88,9 @@ class HeatMapHelper(UtilObject):
 class HeatMap(UtilObject):
     clippingValue = UtilNumpyClippingValue(np.float32)
 
-    def __init__(self, arr):
+    def __init__(self, arr, allowNegative=False):
         # Normalize
-        assert np.min(arr) >= 0.
+        assert (np.min(arr) >= 0.) or allowNegative
         self.weight = np.sum(arr)
         area = arr.shape[0] * arr.shape[1]
         if self.weight > self.clippingValue * area:
