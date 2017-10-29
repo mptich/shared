@@ -351,11 +351,17 @@ def UtilGetDistinctColors(colorCount):
     # TODO Improve algo
     if colorCount > 12:
         return None
-    colorMat = UtilCartesianMatrix([0, 255], [0, 123, 255], [0, 255])
+    colorMat = UtilCartesianMatrix([0, 255], [0, 123, 255], [0, 255]).reshape((-1, 3))
     colorBright = [UtilColorBrightness(x) for x in colorMat]
     inds = np.argsort(colorBright)
     return colorMat[inds, :]
 
+
+def UtilDisplayColorPanel(colorMat, fileName):
+    colorMat = colorMat.reshape((1,) + colorMat.shape)
+    colorMat = np.repeat(colorMat, 30, axis=1)
+    colorMat = np.repeat(colorMat, 30, axis=0)
+    UtilArrayToImageFile(colorMat, fileName)
 
 
 def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
@@ -412,16 +418,23 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
             raise ValueError("No implemented")
 
     elif method == "log":
-        colorCount = 8
+        colorCount = 12
         maxColorIndex = colorCount - 1
         assert count == 1
-        normalizeByHeight = kwargs('normalizeByHeight', None)
+        normalizeByHeight = kwargs.get('normalizeByHeight', None)
+        maxVal = kwargs.get('maxVal', None)
         if normalizeByHeight is not None:
-            matMax = np.max(mat, axis=1).reshape((-1, 1))
-            mat = mat / matMax
+            if maxVal is None:
+                maxVal = np.max(mat, axis=1)
+            if len(maxVal.shape) == 1:
+                maxVal = maxVal.reshape((-1, 1))
+            mat = mat / maxVal
+            maxVal = 1.
         base = kwargs.get('base', 2.)
         offMax = kwargs.get('offMax', base)
-        maxVal = np.max(mat) / offMax
+        if maxVal is None:
+            maxVal = np.max(mat)
+        maxVal /= offMax
         img = mat.clip(min=UtilNumpyClippingValue(np.float32))
         img = (np.log(img / float(maxVal)) / np.log(base) + maxColorIndex).astype(np.int).clip(min=0,
                                                                                                max=maxColorIndex)
