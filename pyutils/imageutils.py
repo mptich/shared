@@ -342,7 +342,23 @@ def UtilRemapImage(img, map, fillMethod=None, fillValue=None, ky=3, kx=3):
     return newArr.clip(min=0., max=255.)
 
 
-def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
+def UtilColorBrightness(color):
+    r, g, b = color
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255.
+
+
+def UtilGetDistinctColors(colorCount):
+    # TODO Improve algo
+    if colorCount > 12:
+        return None
+    colorMat = UtilCartesianMatrix([0, 255], [0, 123, 255], [0, 255])
+    colorBright = [UtilColorBrightness(x) for x in colorMat]
+    inds = np.argsort(colorBright)
+    return colorMat[inds, :]
+
+
+
+def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
     """
     Mostly for debug purposes: convert "arbitrary" marix to an image array
     :param mat: input matrix
@@ -380,6 +396,7 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
             img = np.multiply((mat - minVal) * 255.0, np.reciprocal(diff))
         else:
             raise ValueError("No implemented")
+
     elif method == "flat_hist":
         if count == 1:
             l = sorted(mat.flatten())
@@ -393,6 +410,23 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct"):
             img = np.dstack([images[i] for i in range(count)])
         else:
             raise ValueError("No implemented")
+
+    elif method == "log":
+        colorCount = 8
+        maxColorIndex = colorCount - 1
+        assert count == 1
+        normalizeByHeight = kwargs('normalizeByHeight', None)
+        if normalizeByHeight is not None:
+            matMax = np.max(mat, axis=1).reshape((-1, 1))
+            mat = mat / matMax
+        base = kwargs.get('base', 2.)
+        offMax = kwargs.get('offMax', base)
+        maxVal = np.max(mat) / offMax
+        img = mat.clip(min=UtilNumpyClippingValue(np.float32))
+        img = (np.log(img / float(maxVal)) / np.log(base) + maxColorIndex).astype(np.int).clip(min=0,
+                                                                                               max=maxColorIndex)
+        colorMat = UtilGetDistinctColors(colorCount)
+        img = colorMat[img]
     else:
         raise ValueError("No implemented")
 
@@ -459,6 +493,24 @@ def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0
 def UtilDbg1GrayscaleToImage(img, interval=None, axis=0, fileName=None):
     return UtilDbg2GrayscalesToImage(gImg=img, rImg=img, gInterval=interval, rInterval=interval,
                                     axis=axis, fileName=fileName)
+
+
+def UtilAnyImageRect(img, rect, paddingMode='linear_ramp', **kwargs):
+    """
+    Returns a rectangle cut out of teh image. If part of this rectangle is o
+    :param img:
+    :param rect:
+    :return:
+    """
+    h, w = img.shape[:2]
+    yMin, xMin, yMax, xMax = rect
+    padYBefore = 0 if yMin >= 0 else (-yMin)
+    padXBefore = 0 if xMin >=0 else (-xMin)
+    padYAfter = 0 if yMax <= h else (yMax - h)
+    padXAfter = 0 if xMax <= w else (xMax - w)
+
+    img = np.pad(img, ((padYBefore, padYAfter), (padXBefore, padXAfter)), mode=paddingMode, kwargs=kwargs)
+    return img[yMin+padYBefore:yMax+padYBefore, xMin+padXBefore:xMax+padXBefore]
 
 
 class ImageAnnot(UtilObject):
