@@ -441,6 +441,8 @@ class UtilSimpleLinkedList(UtilObject):
         obj.prev = temp
         if temp is not None:
             temp.next = obj
+        else:
+            self.head = obj
 
     def dequeue(self, obj):
         if obj.next is not None:
