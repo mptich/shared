@@ -392,16 +392,28 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
         mat = np.dstack([mat[:,:,0], mat[:,:,1], np.zeros(shape[:2], dtype = np.float32)])
         count = 3
 
-    if method == "direct":
-        temp = mat if count != 1 else mat.reshape(np.shape(mat)+(1,))
-        maxVal, minVal = (np.amax(temp, axis=(0,1)), np.amin(temp, axis=(0,1)))
-        diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(np.float32))
+    normalizeByHeight = kwargs.get('normalizeByHeight', None)
+    maxVal = kwargs.get('maxVal', None)
+    minVal = kwargs.get('minVal', None)
+    if normalizeByHeight is None:
+        byAxis = (0, 1)
+    else:
+        byAxis = (1,)
+    if maxVal is None:
+        maxVal = np.amax(mat, axis=byAxis)
+    if minVal is None:
+        minVal = np.amin(mat, axis=byAxis)
+    if normalizeByHeight is not None:
         if count == 1:
-            img = (mat - minVal[0])* 255.0 / diff[0]
+            maxVal = maxVal.reshape(maxVal.shape + (1,))
+            minVal = minVal.reshape(minVal.shape + (1,))
         elif count == 3:
-            img = np.multiply((mat - minVal) * 255.0, np.reciprocal(diff))
-        else:
-            raise ValueError("No implemented")
+            maxVal = maxVal.reshape(maxVal.shape[0] + (1, 3))
+            minVal = minVal.reshape(minVal.shape + (1,3))
+
+    if method == "direct":
+        diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(np.float32))
+        img = (mat - minVal) * 255.0 / diff
 
     elif method == "flat_hist":
         if count == 1:
@@ -421,8 +433,6 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
         colorCount = 12
         maxColorIndex = colorCount - 1
         assert count == 1
-        normalizeByHeight = kwargs.get('normalizeByHeight', None)
-        maxVal = kwargs.get('maxVal', None)
         if normalizeByHeight is not None:
             if maxVal is None:
                 maxVal = np.max(mat, axis=1)

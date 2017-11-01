@@ -24,11 +24,10 @@ try:
 except:
    import pickle
 import numpy as np
-from scipy import stats
 import matplotlib.pyplot as plt
 from collections import defaultdict as DefDict
 import errno
-import functools
+from scipy.fftpack import fft as FftTransform
 
 
 UtilObjectKey = "__utilobjectkey__"
@@ -456,6 +455,34 @@ class UtilSimpleLinkedList(UtilObject):
 
     def count(self):
         return self._count
+
+
+@UtilStaticVars(cachedBlackman = {})
+def UtilCalculateFft(data, axis=0):
+    shape = data.shape
+    assert shape[-1] == 2
+
+    if len(shape) > 2:
+        data = data.reshape((-1, 2))
+    data = data[:, 0] + data[:, 1] * 1j
+    data = data.reshape(shape[:-1])
+
+    axisLen = data.shape[axis]
+    blackman = UtilCalculateFft.cachedBlackman.get(axisLen, None)
+    if blackman is None:
+        blackman = np.blackman(axisLen)
+        UtilCalculateFft.cachedBlackman[axisLen] = blackman
+
+    bmShape = tuple()
+    for i in range(len(data.shape)):
+        if i == axis:
+            bmShape += (axisLen,)
+        else:
+            bmShape += (1,)
+    blackman = blackman.reshape(bmShape)
+    data *= blackman
+
+    return FftTransform(data, axis=axis)
 
 
 # Wrapper for primitive values
