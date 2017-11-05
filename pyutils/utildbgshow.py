@@ -135,10 +135,14 @@ def UtilDbgMatrixToImage(mat, imageName = None, method ="direct", **kwargs):
     return img
 
 
-def _scaleBrightnessRange(img, interval, axis=0):
+def _scaleBrightnessRange(img, interval, axis=None):
     if interval is None:
-        minVal = np.min(img)
-        maxVal = np.max(img)
+        if axis is None:
+            minVal = np.min(img)
+            maxVal = np.max(img)
+        else:
+            minVal = np.min(img, axis=axis)
+            maxVal = np.max(img, axis=axis)
     else:
         if isinstance(interval, tuple):
             minVal, maxVal = interval
@@ -150,9 +154,10 @@ def _scaleBrightnessRange(img, interval, axis=0):
         if np.isscalar(clipVal):
             clipVal = np.array([[clipVal]])
         elif axis == 0:
-            clipVal = clipVal.reshape((img.shape[0],1))
+            clipVal = clipVal.reshape((1, img.shape[1]))
         else:
             assert axis == 1
+            clipVal = clipVal.reshape((img.shape[0], 1))
         return clipVal
 
     minVal = _reformatClippers(minVal)
@@ -191,15 +196,22 @@ def UtilDbg1GrayscaleToImage(img, interval=None, axis=0, fileName=None):
                                     axis=axis, fileName=fileName)
 
 
-def UtilDbgDisplayAsPolar(img, interval, axis=0, fileName=None):
+def UtilDbgDisplayAsPolar(img, interval, axis=None, fileName=None, dynamicRangeFunc=None):
     img = UtilCartesianToPolar(img)
+    if dynamicRangeFunc is not None:
+        img[:, :, 0] = dynamicRangeFunc(img[:, :, 0])
+        if interval is not None:
+            if isinstance(interval, tuple):
+                interval = tuple((dynamicRangeFunc(x) for x in interval))
+            else:
+                interval = dynamicRangeFunc(interval)
     brt = _scaleBrightnessRange(img[:, :, 0], interval, axis=axis)
 
     hue = img[:, :, 1] / np.pi
     red = np.abs(hue)
-    green = (1. - red) * 0.6
+    green = 1. - red * 0.56
     blue = 1. - np.abs(1. - np.abs(hue - 0.5))
-    blueMult = (1. - 0.33 * blue) * brt
+    blueMult = (1. - 0.19 * blue) * brt
     red *= blueMult
     green *= blueMult
     blue *= brt
@@ -208,6 +220,22 @@ def UtilDbgDisplayAsPolar(img, interval, axis=0, fileName=None):
     if fileName is not None:
         UtilArrayToImageFile(img, fileName)
     return img
+
+
+def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCounts=False):
+    if inputList is None:
+        if show:
+            plt.show()
+        return
+
+    hist, binEdges = np.histogram(inputList, bins=bins)
+    if logCounts:
+        hist = np.log(np.array(hist) + 1)
+    plt.plot(binEdges[:-1], hist)
+    if show:
+        plt.show()
+    if saveFile is not None:
+        plt.savefig(saveFile)
 
 
 

@@ -19,6 +19,7 @@ import os
 import sys
 import json
 import glob
+import traceback
 try:
    import cPickle as pickle
 except:
@@ -264,23 +265,6 @@ class UtilMultiFile(UtilObject):
                 self.xactCount, (100 * self.hitCount / self.xactCount) if
                 self.xactCount else 0)
 
-
-def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCounts=False):
-    if inputList is None:
-        if show:
-            plt.show()
-        return
-
-    hist, binEdges = np.histogram(inputList, bins=bins)
-    if logCounts:
-        hist = np.log(np.array(hist) + 1)
-    plt.plot(binEdges[:-1], hist)
-    if show:
-        plt.show()
-    if saveFile is not None:
-        plt.savefig(saveFile)
-
-
 def UtilCloseHistogram():
     plt.close()
 
@@ -493,9 +477,20 @@ class UtilWrapper:
         self.value = val
 
 
+class TracePrints(object):
+    """
+    Tracing stray prints
+    adapted and enhanced from https://stackoverflow.com/questions/1617494/finding-a-print-statement-in-python
+    """
+    def __init__(self):
+        self.stdout = sys.stdout
 
+    def write(self, s):
+        self.stdout.write("Writing %r\n" % s)
+        traceback.print_stack(f=sys._getframe(1), limit=1, file=self.stdout)
 
-
+    def flush(self):
+        self.stdout.flush()
 
 
 
