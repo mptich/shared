@@ -148,7 +148,8 @@ def _scaleBrightnessRange(img, interval, axis=None):
             minVal, maxVal = interval
         else:
             maxVal = interval
-            minVal = np.zeros(maxVal.shape, maxVal.dtype)
+            # Have to cast to type(maxVal) becaise scalar and shape () array are not the same :)
+            minVal = type(maxVal)(np.zeros(maxVal.shape, maxVal.dtype))
 
     def _reformatClippers(clipVal):
         if np.isscalar(clipVal):
