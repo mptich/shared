@@ -147,12 +147,13 @@ def UtilReflectCoordTensor(map):
 def UtilAvg2DPointsDistance(pts1, pts2):
     assert pts1.shape == pts2.shape
     assert pts1.shape[-1] == 2
-    pointCount = functools.reduce(lambda x, y: x*y, pts1.shape[:-1])
     diff = pts1 - pts2
-    sqDist = np.sum(diff * diff, axis=-1)
-    meanDist = np.mean(np.sqrt(sqDist))
-    sigmaDist = np.sqrt(np.mean(sqDist))
-    return (meanDist, sigmaDist)
+    dist = np.sqrt(np.sum(diff * diff, axis=-1))
+    worstDist = np.max(dist)
+    worstIndex = np.argmax(dist)
+    meanDist = np.mean(dist)
+    sigmaDist = np.sqrt(np.mean(dist * dist))
+    return (meanDist, sigmaDist, worstDist, worstIndex)
 
 def UtilNumpyRle(arr):
     """
