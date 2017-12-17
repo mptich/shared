@@ -380,7 +380,7 @@ class ImageAnnot(UtilObject):
         else:
             assert isinstance(img, np.ndarray)
             self.name = "ARRAY"
-            self.image = Image.fromarray(img, mode="RGB")
+            self.image = Image.fromarray(UtilImageToInt(img), mode="RGB")
         assert self.image.mode == "RGB"
         self.size = self.image.size
         self.clear()
@@ -448,12 +448,20 @@ class ImageAnnot(UtilObject):
         self.xorImage = self.convertToGray(self.xorImage)
 
     def setBoundaryMask(self, img, colorExtern=(255,0,0), colorIntern=(0,255,0)):
+        """
+        Adds internal and external mask border
+        :param img: numpy ndarray: greyscale (int or float, both 0-255), or boolean
+        :param colorExtern:
+        :param colorIntern:
+        :return:
+        """
         if isinstance(img, str):
-            img = self.convertToGray(Image.open(img, "r"))
+            img = UtilImageFileToArray(img)
         else:
             assert isinstance(img, np.ndarray)
-            assert len(img.shape) == 2
-        img = (np.array(img) >= 128)
+        assert len(img.shape) == 2
+        if img.dtype != np.bool:
+            img = (img >= 128)
         boundaries = UtilRegionBoundaries(img)
         externalCoord = np.transpose(np.logical_and(boundaries, np.logical_not(img)).nonzero())
         externalCoord = np.flip(externalCoord, axis=1).flatten() # PIL requires x,y
