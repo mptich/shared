@@ -525,7 +525,7 @@ class ImageAnnotPlot(UtilObject):
                      color=secColor, linestyle='-', linewidth=1)
 
     def save(self, fileName):
-        plt.savefig(fileName)
+        plt.savefig(fileName, bbox_inches='tight')
         plt.close()
 
 
