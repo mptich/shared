@@ -26,6 +26,8 @@ except:
    import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+# To make it more compatible
+plt.switch_backend('agg')
 from collections import defaultdict as DefDict
 import errno
 from scipy.fftpack import fft as FftTransform
