@@ -145,6 +145,8 @@ def UtilReflectCoordTensor(map):
 
 
 def UtilAvg2DPointsDistance(pts1, pts2):
+    if (pts1 is None) or (pts2 is None):
+        return (None, None, None, None)
     assert pts1.shape == pts2.shape
     assert pts1.shape[-1] == 2
     diff = pts1 - pts2
@@ -168,8 +170,22 @@ def UtilNumpyRle(arr):
     changes = np.where(arr[1:] != arr[:-1])[0]
     changes = np.append(0, changes + 1)
     values = arr[changes]
-    intervals = np.stack([changes, np.append(changes[1:], length) - 1], axis=1).astype(np.int)
+    intervals = np.stack([changes, np.append(changes[1:], length)], axis=1).astype(np.int)
     return (intervals, values)
+
+
+def UtilNumpyExpandRle(intervals, values):
+    """
+    Reverse to UtilNumpyRle
+    :param intervals: ndarray of shape (N, 2), with intervals
+    :param values: ndarray of shape (N,), with values for teh intervals
+    :return: 1 dimensional array
+    """
+    assert intervals.shape[0] == values.shape[0]
+    ret = np.empty((intervals[-1][1] - intervals[0][0],), dtype=values.dtype)
+    for ind, pair in enumerate(intervals):
+        ret[pair[0]:pair[1]] = values[ind]
+    return ret
 
 
 def UtilImageCentroid(image):
@@ -240,6 +256,32 @@ def UtilRandomOptimChoice(array, selectCount):
     ret = np.repeat(array, repeatCount)
     ret = np.append(ret, np.random.choice(array, size = resCount, replace = False))
     return np.random.permutation(ret)
+
+
+class QuickNumpyAppend(UtilObject):
+    """
+    Class to speed up (by caching) numpy.append operation
+    """
+
+    def __init__(self, arr=None, axis=None):
+        self.axis = axis
+        if arr is None:
+            self.cache = []
+        else:
+            self.cache = [arr]
+
+    def append(self, newArr):
+        self.cache.append(newArr)
+
+    def finalize(self):
+        if self.axis is None:
+            self.cache = [x.flatten() for x in self.cache]
+            axis = 0
+        else:
+            axis = self.axis
+        return np.concatenate(self.cache, axis=axis)
+
+
 
 
 
