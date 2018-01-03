@@ -282,6 +282,31 @@ class QuickNumpyAppend(UtilObject):
         return np.concatenate(self.cache, axis=axis)
 
 
+def UtilIntervalsToIndexes(intervals):
+    """
+    Converts 2D array of intervals into contiguous indexes
+    :param intervals:
+    :return:
+    """
+    ret = []
+    for start, stop in intervals:
+        ret += list(range(start, stop))
+    return np.array(ret)
+
+
+def UtilIntervalsToBooleans(intervals, upperLimit):
+    """
+    Converts 2D array of intervals into contiguous boolean array
+    :param intervals:
+    :param upperLimit: the size of output array
+    :return:
+    """
+    ret = np.zeros((upperLimit,), dtype=np.bool)
+    for start, stop in intervals:
+        ret[start:stop] = True
+    return ret
+
+
 
 
 
