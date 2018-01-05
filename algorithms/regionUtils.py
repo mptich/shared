@@ -51,7 +51,7 @@ def UtilVisualizeRegions(mat):
 
     step = 255 // (steps-1)
     colorPoints = range(0,255+1,step)
-    colors = UtilCartesianMatrix3d(colorPoints, colorPoints, colorPoints).reshape(-1,3)[:len(idList),:]
+    colors = UtilCartesianMatrix(colorPoints, colorPoints, colorPoints).reshape(-1,3)[:len(idList),:]
     colorsXlate = np.zeros((idList[-1]+1,3), dtype=np.uint8)
     for idx, v in enumerate(idList):
         colorsXlate[v] = colors[idx]

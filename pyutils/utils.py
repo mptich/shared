@@ -26,8 +26,9 @@ except:
    import pickle
 import numpy as np
 import matplotlib.pyplot as plt
-# To make it more compatible
-plt.switch_backend('agg')
+# To make it compatible with ASCII only environment
+if 'PYPLOT_WITHOUT_DISPLAY' in os.environ:
+    plt.switch_backend('agg')
 from collections import defaultdict as DefDict
 import errno
 from scipy.fftpack import fft as FftTransform

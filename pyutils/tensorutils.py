@@ -52,56 +52,40 @@ def UtilRandomSinFunc(shape, order, expectedStd, independentAxes=False):
     return expectedStd / std * ret
 
 
-def UtilCartesianMatrix2d(arr1, arr2):
-    """
-    Converts [0,1], [2,4] into
-    [0,2],[0,4]
-    [1,2],[1,4]
-    """
-    arr1, arr2 = (np.array(x) if not isinstance(x, np.ndarray) else x for x in (arr1, arr2))
-    assert len(arr1.shape) == len(arr2.shape) == 1
-    transp = np.transpose([np.repeat(arr1, len(arr2)), np.tile(arr2, len(arr1))])
-    return transp.reshape((len(arr1), len(arr2), 2))
-
-
-def UtilCartesianMatrix3d(arr1, arr2, arr3):
+def UtilCartesianMatrix(*arrayList):
     """
     Converts [0,1], [2,4], [8,9] into
     [[0,2,8],[0,2,9]], [[0,4,8], [0,4,9]]
     [[1,2,8],[1,2,9]], [[1,4,8],[1,4,9]]
     """
-    arr1, arr2, arr3 = (np.array(x) if not isinstance(x, np.ndarray) else x for x in (arr1, arr2, arr3))
-    assert len(arr1.shape) == len(arr2.shape) == len(arr3.shape) == 1
-    transp = np.transpose([np.repeat(arr1, len(arr2)*len(arr3)), \
-                           np.repeat(np.tile(arr2, len(arr1)), len(arr3)), \
-                           np.tile(arr3, len(arr1)*len(arr2))])
-    return transp.reshape((len(arr1), len(arr2), len(arr3), 3))
-
-
-def UtilCartesianMatrix(arr1, arr2=None, arr3=None):
-    if arr2 is None:
-        return np.array(arr1).reshape(-1,1)
-    elif arr3 is None:
-        return UtilCartesianMatrix2d(arr1, arr2)
-    return UtilCartesianMatrix3d(arr1, arr2, arr3)
+    shape = tuple([len(x) for x in arrayList])
+    inds = UtilNumpyFlatIndices(shape)
+    return np.stack([np.array(x)[inds[i]].reshape(shape) for i, x in enumerate(arrayList)], axis=len(arrayList))
 
 
 @UtilStaticVars(cached={})
-def UtilCartesianMatrixDefault(size1, size2=None, size3=None):
+def UtilCartesianMatrixDefault(*sizeList):
     """
-    Returns potentially cached Cartesian matrix of range(size1), range(size2), range(size3)
+    Returns potentially cached Cartesian matrix of range(size1), range(size2), range(size3), ...
     """
-    tup = (size1, size2, size3)
+    tup = tuple(sizeList)
     if tup in UtilCartesianMatrixDefault.cached:
         return UtilCartesianMatrixDefault.cached[tup]
-    if size2 is None:
-        ret = np.array(range(size1)).reshape(-1,1)
-    elif size3 is None:
-        ret = UtilCartesianMatrix2d(range(size1), range(size2))
-    else:
-        ret = UtilCartesianMatrix3d(range(size1), range(size2), range(size3))
+    arrayList = [range(x) for x in tup]
+    ret = UtilCartesianMatrix(*arrayList)
     UtilCartesianMatrixDefault.cached[tup] = ret
     return ret
+
+
+def UtilNumpyFlatIndices(dims):
+    """
+    Presents indices of along each axes as a flat array. Output is a 2D array
+    :param dims:
+    :return:
+    """
+    inds = np.indices(dims)
+    # Do not make it an ndarray, must be just a list to be correctly used as indices
+    return [x.flatten() for x in inds[:]]
 
 
 def UtilReflectCoordTensorWithExclusion(map, excludedArea=None):
@@ -156,6 +140,7 @@ def UtilAvg2DPointsDistance(pts1, pts2):
     meanDist = np.mean(dist)
     sigmaDist = np.sqrt(np.mean(dist * dist))
     return (meanDist, sigmaDist, worstDist, worstIndex)
+
 
 def UtilNumpyRle(arr):
     """
@@ -307,6 +292,22 @@ def UtilIntervalsToBooleans(intervals, upperLimit):
     return ret
 
 
+def UtilAdjustNumpyDims(arrayList):
+    """
+    Adjusts sizes of input arrays in teh list to the minimum size by every axis
+    :param arrayList:
+    :return:
+    """
+    minShape = None
+    for a in arrayList:
+        if minShape is None:
+            minShape = np.array(a.shape)
+        else:
+            arrShape = np.array(a.shape)
+            minShape = np.where(arrShape < minShape, arrShape, minShape)
 
+    minShape = tuple(minShape)
+    inds = UtilNumpyFlatIndices(minShape)
+    return [x[inds].reshape(minShape) for x in arrayList]
 
 
