@@ -239,6 +239,40 @@ def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCo
         plt.savefig(saveFile)
 
 
+def UtilDisplayGrayMatrixWithCharts(mat, imageName, chart1, chart2=None, chart3=None):
+    """
+    chart1, chart2, and chart3 must have values within [0, mat.shape[0]] range
+    :param mat:
+    :param imageName:
+    :param chart1:
+    :param chart2:
+    :return:
+    """
+    img = UtilDbgMatrixToImage(mat, imageName=None, method='direct')
+    img = np.expand_dims(img, axis=2)
+    img = np.repeat(img, repeats=3, axis=2)
+
+    def _adjustChart(c):
+        c = np.rint(c).astype(np.int).clip(min=0, max=img.shape[0]-1)
+        c = c[:img.shape[1]]
+        return c
+
+    chart1 = _adjustChart(chart1)
+    img[chart1, range(img.shape[1])] = [0, 0, 0]
+    if chart2 is not None:
+        chart2 = _adjustChart(chart2)
+        img[chart2, range(img.shape[1])] = [0, 0, 0]
+    if chart3 is not None:
+        chart3 = _adjustChart(chart3)
+        img[chart3, range(img.shape[1])] = [0, 0, 0]
+    img[chart1, range(img.shape[1])] += [255, 0, 0]
+    if chart2 is not None:
+        img[chart2, range(img.shape[1])] += [0, 255, 0]
+    if chart3 is not None:
+        img[chart3, range(img.shape[1])] += [0, 0, 255]
+
+    return UtilArrayToImageFile(img, imageName)
+
 
 
 

@@ -258,6 +258,13 @@ class QuickNumpyAppend(UtilObject):
     def append(self, newArr):
         self.cache.append(newArr)
 
+    def runLens(self):
+        if self.axis is None:
+            rl = [x.flatten().shape[0] for x in self.cache]
+        else:
+            rl = [x.shape[self.axis] for x in self.cache]
+        return np.array(rl)
+
     def finalize(self):
         if self.axis is None:
             self.cache = [x.flatten() for x in self.cache]
