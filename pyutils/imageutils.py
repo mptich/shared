@@ -487,7 +487,12 @@ class ImageAnnot(UtilObject):
 
 class ImageAnnotPlot(UtilObject):
 
-    def __init__(self, totalHeight, totalWidth, img):
+    def __init__(self, img, totalHeight=None, totalWidth=None):
+        assert (totalHeight is not None) or (totalWidth is not None)
+        if totalHeight is not None:
+            totalWidth = totalHeight * img.shape[1] // img.shape[0]
+        else:
+            totalHeight = totalWidth * img.shape[0] // img.shape[1]
         self.height = totalHeight
         self.width = totalWidth
         plt.figure(figsize=(self.width/100, self.height/100), dpi=100)
