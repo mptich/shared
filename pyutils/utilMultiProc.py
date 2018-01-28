@@ -148,7 +148,7 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
         for fn in fileList:
             os.remove(fn)
 
-    return exitCodes
+    return np.array(exitCodes)
 
 
 class UtilParallelFixedWriter(UtilObject):
