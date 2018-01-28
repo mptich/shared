@@ -301,7 +301,7 @@ def UtilIntervalsToBooleans(intervals, upperLimit):
 
 def UtilAdjustNumpyDims(arrayList):
     """
-    Adjusts sizes of input arrays in teh list to the minimum size by every axis
+    Adjusts sizes of input arrays in the list to the minimum size by every axis
     :param arrayList:
     :return:
     """
@@ -316,5 +316,24 @@ def UtilAdjustNumpyDims(arrayList):
     minShape = tuple(minShape)
     inds = UtilNumpyFlatIndices(minShape)
     return [x[inds].reshape(minShape) for x in arrayList]
+
+
+def UtilIsNumpyTypeFloat(numpyType):
+    """
+    The only reliable way I found for any float size
+    :param numpyType:
+    :return:
+    """
+    return str(numpyType)[:5] == 'float'
+
+
+def UtilIsNumpyTypeInt(numpyType):
+    """
+    The only reliable way I found for any int size
+    :param numpyType:
+    :return:
+    """
+    return str(numpyType)[:3] == 'int'
+
 
 
