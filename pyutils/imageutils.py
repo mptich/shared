@@ -509,7 +509,7 @@ class ImageAnnotPlot(UtilObject):
     def pointPairToLineCoord(p1, p2):
         return (np.array([p1[1], p2[1]]), np.array([p1[0], p2[0]]))
 
-    def addConnectedPoints(self, points, connections, color):
+    def addConnectedPoints(self, points, connections, color=(255, 0, 0)):
         """
         :param points: point coordinates, shape (N, 2), type float
         :param connections: connections in terms of points, shape (K, 2), type uint
@@ -527,7 +527,7 @@ class ImageAnnotPlot(UtilObject):
         for ind, p in enumerate(points):
             plt.text(p[1], p[0], ' ' + str(ind + 1), color=color, fontsize=self.height / 100)
 
-    def addConnectedAndSecondaryPoints(self, points, secPoints, connections, color, secColor):
+    def addConnectedAndSecondaryPoints(self, points, secPoints, connections, color=(255, 0, 0), secColor=(0, 255, 0)):
         assert points.shape[0] == secPoints.shape[0]
         self.addConnectedPoints(points, connections, color)
         secColor = self.scaleColor(secColor)
