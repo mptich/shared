@@ -142,6 +142,25 @@ def UtilAvg2DPointsDistance(pts1, pts2):
     return (meanDist, sigmaDist, worstDist, worstIndex)
 
 
+def UtilPerpendIntersectLine(linePt1, linePt2, perpPt):
+    """
+    Calculates coordinates of intersection between line (defined by points linePt1 and linePt2) and point perpPt
+    :param linePt1:
+    :param linePt2:
+    :param perpPt:
+    :return:
+    """
+    y1, x1 = linePt1
+    y2, x2 = linePt2
+    yp, xp = perpPt
+    ydiff = y2 - y1
+    xdiff = x2 - x1
+    coef = ((y2 - y1) * (xp - x1) - (x2 - x1) * (yp - y1)) / (ydiff * ydiff + xdiff * xdiff)
+    x = xp - coef * (y2 - y1)
+    y = yp + coef * (x2 - x1)
+    return np.array([y, x])
+
+
 def UtilNumpyRle(arr):
     """
     Numpy RLE algo
