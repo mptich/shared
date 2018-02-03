@@ -525,7 +525,7 @@ class ImageAnnotPlot(UtilObject):
             self.pointPairToLineCoord(pp[0], pp[1])
             plt.plot(*self.pointPairToLineCoord(pp[0], pp[1]), color=color, linestyle='-', linewidth=1)
         for ind, p in enumerate(points):
-            plt.text(p[1], p[0], ' ' + str(ind + 1), color=color, fontsize=self.height / 100)
+            plt.text(p[1], p[0], ' ' + str(ind + 1), color=color)
 
     def addConnectedAndSecondaryPoints(self, points, secPoints, connections, color=(255, 0, 0), secColor=(0, 255, 0)):
         assert points.shape[0] == secPoints.shape[0]
