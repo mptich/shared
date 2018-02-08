@@ -486,6 +486,7 @@ class ImageAnnot(UtilObject):
 
 
 class ImageAnnotPlot(UtilObject):
+    Dpi = 100.
 
     def __init__(self, img, totalHeight=None, totalWidth=None):
         assert (totalHeight is not None) or (totalWidth is not None)
@@ -495,7 +496,7 @@ class ImageAnnotPlot(UtilObject):
             totalHeight = totalWidth * img.shape[0] // img.shape[1]
         self.height = totalHeight
         self.width = totalWidth
-        plt.figure(figsize=(self.width/100, self.height/100), dpi=100)
+        plt.figure(figsize=(self.width/self.Dpi, self.height/self.Dpi), dpi=self.Dpi)
         img = UtilImageToInt(img)
         plt.imshow(img)
         plt.xlim((0, img.shape[1]))
@@ -509,36 +510,40 @@ class ImageAnnotPlot(UtilObject):
     def pointPairToLineCoord(p1, p2):
         return (np.array([p1[1], p2[1]]), np.array([p1[0], p2[0]]))
 
-    def addConnectedPoints(self, points, connections, color=(255, 0, 0)):
+    def addConnectedPoints(self, points, connections, color=(255, 0, 0), colorLine=None, colorText=None):
         """
         :param points: point coordinates, shape (N, 2), type float
         :param connections: connections in terms of points, shape (K, 2), type uint
         :param color: (R, G, B) 0 - 255
         :return:
         """
-
-        color = self.scaleColor(color)
+        temp = [x if x is not None else color for x in (colorLine, colorText)]
+        color, colorLine, colorText = [self.scaleColor(x) for x in ([color] + temp)]
         for p in points:
             plt.plot(p[1], p[0], 'o', color=color)
         pointPairs = points[connections]
         for pp in pointPairs:
             self.pointPairToLineCoord(pp[0], pp[1])
-            plt.plot(*self.pointPairToLineCoord(pp[0], pp[1]), color=color, linestyle='-', linewidth=1)
+            plt.plot(*self.pointPairToLineCoord(pp[0], pp[1]), color=colorLine, linestyle='-', linewidth=1)
         for ind, p in enumerate(points):
-            plt.text(p[1], p[0], ' ' + str(ind + 1), color=color)
+            plt.text(p[1], p[0], ' ' + str(ind + 1), color=colorText)
 
-    def addConnectedAndSecondaryPoints(self, points, secPoints, connections, color=(255, 0, 0), secColor=(0, 255, 0)):
+    def addConnectedAndSecondaryPoints(self, points, secPoints, connections, color=(255, 0, 0), secColor=(0, 255, 0),
+                                       colorLine=None, colorText=None, secColorLine=None):
+
+        secColorLine = secColorLine if secColorLine is not None else secColor
+        secColor, secColorLine = [self.scaleColor(x) for x in [secColor, secColorLine]]
+
         assert points.shape[0] == secPoints.shape[0]
-        self.addConnectedPoints(points, connections, color)
-        secColor = self.scaleColor(secColor)
+        self.addConnectedPoints(points, connections, color, colorLine=colorLine, colorText=colorText)
         for p in secPoints:
             plt.plot(p[1], p[0], 'o', color=secColor)
         for ind in range(points.shape[0]):
             plt.plot(*self.pointPairToLineCoord(points[ind], secPoints[ind]),
-                     color=secColor, linestyle='-', linewidth=1)
+                     color=secColorLine, linestyle='-', linewidth=1)
 
     def save(self, fileName):
-        plt.savefig(fileName, bbox_inches='tight')
+        plt.savefig(fileName, bbox_inches='tight', dpi=self.Dpi)
         plt.close()
 
 

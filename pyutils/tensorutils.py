@@ -318,6 +318,38 @@ def UtilIntervalsToBooleans(intervals, upperLimit):
     return ret
 
 
+def UtilContigLengthesToAlternateBool(contigLens):
+    """
+    Transform contiguous lengths into numpy array of alternate booleans
+    :param contigLens:
+    :return:
+    """
+    totalLen = np.sum(contigLens)
+    ret = np.empty((totalLen,), dtype=np.bool)
+    start = 0
+    val = True
+    for len in contigLens:
+        ret[start:start+len] = val
+        val = not val
+        start += len
+    return ret
+
+
+def UtilIntersectContigLens(contigLens1, contigLens2):
+    """
+    (2, 4, 2) x (1, 2, 2, 3) = (1, 1, 1, 2, 1, 2)
+    :param contigLens1:
+    :param contigLens2:
+    :return:
+    """
+    boolAlt1 = UtilContigLengthesToAlternateBool(contigLens1)
+    boolAlt2 = UtilContigLengthesToAlternateBool(contigLens2)
+    assert boolAlt1.shape == boolAlt2.shape
+    boolAlt = np.logical_xor(boolAlt1, boolAlt2)
+    intervals, _ = UtilNumpyRle(boolAlt)
+    return intervals[:, 1] - intervals[:, 0]
+
+
 def UtilAdjustNumpyDims(arrayList):
     """
     Adjusts sizes of input arrays in the list to the minimum size by every axis
