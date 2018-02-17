@@ -148,7 +148,7 @@ def _scaleBrightnessRange(img, interval, axis=None):
             minVal, maxVal = interval
         else:
             maxVal = interval
-            # Have to cast to type(maxVal) becaise scalar and shape () array are not the same :)
+            # Have to cast to type(maxVal) because scalar and shape () array are not the same :)
             minVal = type(maxVal)(np.zeros(maxVal.shape, maxVal.dtype))
 
     def _reformatClippers(clipVal):
@@ -166,7 +166,7 @@ def _scaleBrightnessRange(img, interval, axis=None):
     diff = (maxVal - minVal).clip(min=UtilNumpyClippingValue(img.dtype))
     recipDiff = np.reciprocal(diff)
     img = (img - minVal) * recipDiff
-    return (img * 255.).astype(np.uint8).clip(min=0, max=255)
+    return img
 
 
 def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0, fileName=None):
@@ -184,9 +184,10 @@ def UtilDbg2GrayscalesToImage(gImg, rImg, gInterval=None, rInterval=None, axis=0
 
     gImg = _scaleBrightnessRange(gImg, gInterval, axis=axis)
     rImg = _scaleBrightnessRange(rImg, rInterval, axis=axis)
-    bImg = np.ndarray(shape=gImg.shape, dtype=np.uint8)
-    bImg.fill(255)
+    bImg = np.ndarray(shape=gImg.shape, dtype=gImg)
+    bImg.fill(1.)
     img = np.stack([rImg, gImg, bImg], axis=2)
+    img = (img * 255.).astype(np.uint8).clip(min=0, max=255)
     if fileName is not None:
         UtilArrayToImageFile(img, fileName)
     return img
@@ -198,6 +199,16 @@ def UtilDbg1GrayscaleToImage(img, interval=None, axis=0, fileName=None):
 
 
 def UtilDbgDisplayAsPolar(img, interval, axis=None, fileName=None, dynamicRangeFunc=None):
+    """
+    Converts img in cartesian coordinates to polar, displays it
+    Phase is shown with color: postive angl
+    :param img: Input image in cartesian coordinates (shape (..., 2))
+    :param interval: None, or just maxValue, or tuple (minValue, maxValue)
+    :param axis: axis ofr usage of min/max values
+    :param fileName:
+    :param dynamicRangeFunc:
+    :return:
+    """
     img = UtilCartesianToPolar(img)
     if dynamicRangeFunc is not None:
         img[:, :, 0] = dynamicRangeFunc(img[:, :, 0])
@@ -207,17 +218,26 @@ def UtilDbgDisplayAsPolar(img, interval, axis=None, fileName=None, dynamicRangeF
             else:
                 interval = dynamicRangeFunc(interval)
     brt = _scaleBrightnessRange(img[:, :, 0], interval, axis=axis)
+    return UtilDbgDisplayPolar(np.stack([brt, img[:, :, 1]], axis=2), fileName=fileName)
 
-    hue = img[:, :, 1] / np.pi
-    red = np.abs(hue)
-    green = 1. - red * 0.56
-    blue = 1. - np.abs(1. - np.abs(hue - 0.5))
-    blueMult = (1. - 0.19 * blue) * brt
-    red *= blueMult
-    green *= blueMult
-    blue *= brt
 
-    img = UtilImageToInt(np.stack([red, green, blue], axis=2))
+def UtilDbgDisplayPolar(polarImg, fileName=None):
+    """
+    Displays image in polar coordinates
+    :param img: numpy array[M, N, 2], where 0 is amplitude [0., 1.], 1 is phase [-pi, pi]
+    :return:
+    """
+
+    # Start with HLS image
+    lumin = (polarImg[:, :, 0] * 128.).astype(np.uint8)
+    halfCirc = polarImg[:, :, 1] / np.pi
+    halfCirc = np.where(halfCirc >= 0., halfCirc, 2. + halfCirc)
+    hue = (halfCirc * 90.).astype(np.uint8)
+    satur = np.empty(polarImg.shape[:2], dtype=np.uint8)
+    satur.fill(255)
+    img = np.stack([hue, lumin, satur], axis=2)
+    img = cv2.cvtColor(img, cv2.COLOR_HLS2RGB)
+
     if fileName is not None:
         UtilArrayToImageFile(img, fileName)
     return img
@@ -239,39 +259,46 @@ def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCo
         plt.savefig(saveFile)
 
 
-def UtilDisplayGrayMatrixWithCharts(mat, imageName, chart1, chart2=None, chart3=None):
+def UtilDisplayMatrixWithCharts(img, imageName=None, chartList=None, colorList=None, asIs=False):
     """
-    chart1, chart2, and chart3 must have values within [0, mat.shape[0]] range
-    :param mat:
+    Elements in chartList must have values within [0, img.shape[0]] range
+    :param img:
     :param imageName:
-    :param chart1:
-    :param chart2:
+    :param chartList:
+    :param colorList:
     :return:
     """
-    img = UtilDbgMatrixToImage(mat, imageName=None, method='direct')
-    img = np.expand_dims(img, axis=2)
-    img = np.repeat(img, repeats=3, axis=2)
+    assert (len(chartList) <= 3) or (len(chartList) == len(colorList))
+    assert (colorList is None) or (len(chartList) == len(colorList))
+    for chart in chartList:
+        assert chart.shape[0] == img.shape[1]
+    if colorList is None:
+        colorList = [[255, 0, 0], [0, 255, 0], [0, 0, 255]][:len(chartList)]
+
+    if len(img.shape) == 2:
+        img = np.stack([img] * 3, axis=2)
+    if not asIs:
+        img = UtilDbgMatrixToImage(img, imageName=None, method='direct')
 
     def _adjustChart(c):
         c = np.rint(c).astype(np.int).clip(min=0, max=img.shape[0]-1)
         c = c[:img.shape[1]]
         return c
 
-    chart1 = _adjustChart(chart1)
-    img[chart1, range(img.shape[1])] = [0, 0, 0]
-    if chart2 is not None:
-        chart2 = _adjustChart(chart2)
-        img[chart2, range(img.shape[1])] = [0, 0, 0]
-    if chart3 is not None:
-        chart3 = _adjustChart(chart3)
-        img[chart3, range(img.shape[1])] = [0, 0, 0]
-    img[chart1, range(img.shape[1])] += [255, 0, 0]
-    if chart2 is not None:
-        img[chart2, range(img.shape[1])] += [0, 255, 0]
-    if chart3 is not None:
-        img[chart3, range(img.shape[1])] += [0, 0, 255]
+    chartList = [_adjustChart(chart) for chart in chartList]
+    for chart in chartList:
+        img[chart, range(img.shape[1])] = [0, 0, 0]
+    for chart in chartList:
+        img[chart, range(img.shape[1])] = [0, 0, 0]
 
-    return UtilArrayToImageFile(img, imageName)
+    img = img.astype(np.int)
+    for ind, chart in enumerate(chartList):
+        img[chart, range(img.shape[1])] += np.array(colorList[ind], dtype=np.int)
+    img = img.clip(min=0, max=255).astype(np.uint8)
+
+    if imageName is not None:
+        UtilArrayToImageFile(img, imageName)
+    return img
 
 
 
