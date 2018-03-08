@@ -19,12 +19,14 @@
 import shared.pyutils.forwardCompat as forwardCompat
 import sys
 from shared.pyutils.utils import *
+from shared.pyutils.tensorutils import *
 import tempfile
 import csv
 from multiprocessing import cpu_count, Process, Array
 import importlib
 import shlex
 import subprocess
+import time
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
@@ -33,7 +35,7 @@ def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     func(*args)
 
 
-def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None):
+def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None, waitForAll=True):
     """
     Launches prcesses by calling func in different address space
     :param moduleName: name of the module where this function resides
@@ -51,7 +53,27 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
 
     # Wait for all child processes to finish
     [p.start() for p in pList]
-    [p.join() for p in pList]
+
+    if waitForAll:
+        [p.join() for p in pList]
+    else:
+        pFinishedList = []
+        pRunningList = []
+        terminating = False
+        while True:
+            for p in pList:
+                if p.exitcode is not None:
+                    pFinishedList.append(p)
+                    if (p.exitcode != 0) and (not terminating):
+                        for pr in pList:
+                            pr.terminate()
+                        terminating = True
+                else:
+                    pRunningList.append(p)
+            pList = pRunningList
+            time.wait(1.)
+        pList = pFinishedList
+
     return [p.exitcode for p in pList]
 
 
@@ -100,7 +122,7 @@ class UtilMultiCsvWriter(UtilObject):
 
 
 def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelCount=None, debugDirectCall=None, \
-                           logFilePrefix=None):
+                           logFilePrefix=None, waitForAll=True):
     """
     Calls generator to generate input CSV for each process. The function takes CSV file name as a first parameter,
     then takes a list of args
@@ -139,7 +161,8 @@ def UtilFanMultiCsvProcess(generator, moduleName, funcName, args=None, parallelC
             l = [fn] + args
             listOfArgLists.append(l)
 
-        exitCodes = UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=logFilePrefix)
+        exitCodes = UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=logFilePrefix,
+                                        waitForAll=waitForAll)
         print ("Child processes exit codes %s" % str(exitCodes))
 
     finally:
