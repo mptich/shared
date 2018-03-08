@@ -71,7 +71,7 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
                 else:
                     pRunningList.append(p)
             pList = pRunningList
-            time.wait(1.)
+            time.sleep(1.)
         pList = pFinishedList
 
     return [p.exitcode for p in pList]
