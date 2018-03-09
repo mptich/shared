@@ -72,6 +72,7 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
                 else:
                     pRunningList.append(p)
             pList = pRunningList
+            pRunningList = []
             time.sleep(1.)
         pList = pFinishedList
 
