@@ -60,13 +60,14 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
         pFinishedList = []
         pRunningList = []
         terminating = False
-        while True:
+        while pList:
             for p in pList:
                 if p.exitcode is not None:
                     pFinishedList.append(p)
                     if (p.exitcode != 0) and (not terminating):
                         for pr in pList:
-                            pr.terminate()
+                            if pr != p:
+                                pr.terminate()
                         terminating = True
                 else:
                     pRunningList.append(p)
