@@ -22,6 +22,7 @@ import sys
 import json
 import glob
 import traceback
+import shared.pyutils.forwardCompat as forwardCompat
 try:
    import cPickle as pickle
 except:

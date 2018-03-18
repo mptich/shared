@@ -36,7 +36,7 @@ def urlRead(urlStr, fileName = None):
 
 def test():
 
-    print urlRead("http://cbk0.google.com/cbk?output=xml&panoid=Q6Z2Rhy5_lHSoFAWz-Qmww")
+    print(urlRead("http://cbk0.google.com/cbk?output=xml&panoid=Q6Z2Rhy5_lHSoFAWz-Qmww"))
     urlRead("http://cbk0.google.com/cbk?output=thumbnail&w=300&h=128&panoid=Q6Z2Rhy5_lHSoFAWz-Qmww", "image2.jpeg")
 
 if __name__ == "__main__":
