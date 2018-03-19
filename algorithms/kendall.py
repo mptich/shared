@@ -1,5 +1,20 @@
-# This module implements a Weighted Kendall Tau Distance algorithm,
-# described in the article:
+# This module implements a Weighted Kendall Tau Distance algorithm, described in the article:
+#
+# Copyright (C) 2016-2018  Author: Misha Orel
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+# documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+# the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+# THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
 
 import numpy as np
 
@@ -111,35 +126,18 @@ def mergeSublists(src1, src2, dst, dist):
 
 # Test
 if __name__ == "__main__":
-    print calculateWeightedKendall([1,2,3,4], [4,3,2,1], [0.6, 0.8, 1, 0.3])
-    print calculateWeightedKendall([1,2,3,4,5], [1,2,3,4,5], [0.6, 0.8, 1,
-        0.3, 0.8])
-    print calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 100, 100,
-        100, 0.8])
-    print calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 1, 1,
-        1, 0.8])
-    print calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 0.1, 0.1,
-        0.1, 0.8])
-    print calculateWeightedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 0.6,
-        0.4, 0.3, 0.2, 0.1])
-    print calculateWeightedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 1,
-        1, 1, 1, 1])
-    print calculateWeightedKendall([1,2,3,4,5,6], [6,5,2,4,3,1], [1, 1,
-        1, 1, 1, 1])
-    components = {}
-    print calculateWeightedKendall([1,2,2,1,2,1], [4,1,2,5,3,6], [0.6, 0.5,
-        1.7, 10., 4.3, 0.8])
-    print "Comp ", components
-    components = {}
-    print calculateWeightedKendall([1,2,2,1,2,1], [3,6,5,2,4,1], [0.6, 0.5,
-        1.7, 10., 4.3, 0.8], components)
-    print "Comp ", components
-    components = {}
-    print calculateWeightedKendall([1,2,2,1,2,1], [4,6,5,2,3,1], None,
-                                   components)
-    print "Comp ", components
-    print calculateWeightedKendall([1,3,2,4],[1,1,2,2])
-    print calculateWeightedKendall([1,1,2,2],[1,3,2,4])
+    print(calculateWeightedKendall([1,2,3,4], [4,3,2,1], [0.6, 0.8, 1, 0.3]))
+    print(calculateWeightedKendall([1,2,3,4,5], [1,2,3,4,5], [0.6, 0.8, 1,
+        0.3, 0.8]))
+    print(calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 100, 100,
+        100, 0.8]))
+    print(calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 1, 1,
+        1, 0.8]))
+    print(calculateWeightedKendall([1,2,3,4,5], [1,4,3,2,5], [0.6, 0.1, 0.1,
+        0.1, 0.8]))
+    print(calculateWeightedKendall([1,2,3,4,5,6], [1,2,4,6,5,3], [1, 0.6,
+        0.4, 0.3, 0.2, 0.1]))
+
 
 
 
