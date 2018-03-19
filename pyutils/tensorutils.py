@@ -21,6 +21,7 @@ __author__ = "Misha Orel"
 
 import shared.pyutils.forwardCompat as forwardCompat
 from shared.pyutils.utils import *
+import numpy as np
 import functools
 import cv2
 
