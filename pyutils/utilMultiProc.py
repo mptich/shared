@@ -31,6 +31,8 @@ import time
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
+        folder = os.path.split(logFileName)[0]
+        UtilSafeMkdir(folder)
         sys.stdout = sys.stderr = open(logFileName, 'w', 1)
     func = getattr(importlib.import_module(moduleName), funcName)
     func(*args)
