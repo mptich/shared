@@ -24,6 +24,7 @@ from shared.pyutils.utils import *
 import numpy as np
 import functools
 import cv2
+from collections import Counter
 
 
 def UtilRandomSinFunc(shape, order, expectedStd, independentAxes=False):
@@ -265,6 +266,26 @@ def UtilRandomOptimChoice(array, selectCount):
     return np.random.permutation(ret)
 
 
+def UtilBalancedSetIndexes(labels):
+    """
+    Selects, based on 1D labels array, a set of indexes to generate a balanced, randomized set
+    labels must be an array of unmutable (hashable) objects
+    :param labels:
+    :return: array of indexes into labels
+    """
+    d = Counter()
+    for v in np.unique(labels):
+        d[v] = np.sum(labels == v)
+    mc = d.most_common()
+    maxCount = mc[0][1]
+
+    choices = []
+    for v in d.keys():
+        choices.append(UtilRandomOptimChoice(np.where(labels == v)[0], maxCount))
+    choices = np.concatenate(choices, axis=0)
+    return np.random.permutation(choices)
+
+
 class QuickNumpyAppend(UtilObject):
     """
     Class to speed up (by caching) numpy.append operation
@@ -388,6 +409,3 @@ def UtilIsNumpyTypeInt(numpyType):
     :return:
     """
     return str(numpyType)[:3] == 'int'
-
-
-

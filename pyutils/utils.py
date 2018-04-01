@@ -22,6 +22,7 @@ import sys
 import json
 import glob
 import traceback
+import types
 import shared.pyutils.forwardCompat as forwardCompat
 try:
    import cPickle as pickle
@@ -317,7 +318,7 @@ def UtilLoad(fileName, progrIndPeriod = 10000, fileType=None):
 
     if fileType == "JSON":
         ctrList = []
-        obj = json.load(open(fileName, 'rt'),
+        obj = json.load(open(fileName, 'r', encoding='utf-8'),
             object_hook = UtilJsonDecoderFactory(progrIndPeriod=progrIndPeriod, retList=ctrList))
         if ctrList[0][0] > 0:
             print("") # Next line
@@ -353,6 +354,77 @@ def UtilSafeMkdir(dirName):
         if exception.errno != errno.EEXIST:
             raise
     return ret
+
+
+class UtilTemporaryDirectory(object):
+    """Context manager for tempfile.mkdtemp() so it's usable with "with" statement."""
+    def __enter__(self):
+        self.name = tempfile.mkdtemp()
+        return self.name
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        shutil.rmtree(self.name)
+        
+        
+class UtilNotebookLoader(object):
+    """
+    Module Loader for Jupyter Notebooks
+    The idea is taken from:
+    http://nbviewer.jupyter.org/github/jupyter/notebook/blob/master/docs/source/examples/Notebook/Importing%20Notebooks.ipynb
+    """
+    
+    # This class should only work in ipython environment. So if we cannot import ipython, we should silently fail
+    try:
+        from IPython.core.interactiveshell import InteractiveShell
+        from nbformat import read
+    except ImportError as ex:
+        pass
+    
+    def __init__(self, path, name=None):
+        
+        moduleName = path if name is None else name
+        
+        # Check if module is already loaded
+        if moduleName in sys.modules:
+            self.mod = sys.modules[moduleName]
+            return
+        
+        self.shell = UtilNotebookLoader.InteractiveShell.instance()
+        self.path = path
+           
+        print ("importing Jupyter notebook from %s" % path)
+                                       
+        # load the notebook object
+        with open(path, 'r', encoding='utf-8') as f:
+            nb = UtilNotebookLoader.read(f, 4)
+        
+        # create the module and add it to sys.modules
+        mod = types.ModuleType(moduleName)
+        mod.__file__ = path
+        mod.__loader__ = self
+        mod.__dict__['get_ipython'] = get_ipython
+        sys.modules[moduleName] = mod
+        
+        # extra work to ensure that magics that would affect the user_ns
+        # actually affect the notebook module's ns
+        save_user_ns = self.shell.user_ns
+        self.shell.user_ns = mod.__dict__
+        
+        try:
+          for cell in nb.cells:
+            if cell.cell_type == 'code':
+                # transform the input to executable Python
+                code = self.shell.input_transformer_manager.transform_cell(cell.source)
+                # run the code in themodule
+                exec(code, mod.__dict__)
+        finally:
+            self.shell.user_ns = save_user_ns
+            
+        self.mod = mod
+        
+    def module(self):
+        return self.mod
+        
 
 def UtilSafeMultiGlob(listOfPatterns):
     """
