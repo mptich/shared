@@ -376,11 +376,19 @@ class UtilNotebookLoader(object):
     # This class should only work in ipython environment. So if we cannot import ipython, we should silently fail
     try:
         from IPython.core.interactiveshell import InteractiveShell
+        from IPython import get_ipython
         from nbformat import read
+        valid = True
     except ImportError as ex:
-        pass
+        valid = False
+
     
     def __init__(self, path, name=None):
+        
+        if not UtilNotebookLoader.valid:
+            # Wrong environment
+            self.mod = None
+            return
         
         moduleName = path if name is None else name
         
@@ -402,7 +410,7 @@ class UtilNotebookLoader(object):
         mod = types.ModuleType(moduleName)
         mod.__file__ = path
         mod.__loader__ = self
-        mod.__dict__['get_ipython'] = get_ipython
+        mod.__dict__['get_ipython'] = UtilNotebookLoader.get_ipython
         sys.modules[moduleName] = mod
         
         # extra work to ensure that magics that would affect the user_ns
@@ -495,9 +503,9 @@ def UtilShellCmd(cmd, printCmd=True, printStdout=True, printStderr=True):
         out = b""
         err = bytes(str(ex), 'utf-8')
     if printStdout and out:
-        print(out.decode('utf-8'), end='', file=sys.stdout)
+        print(out.decode('utf-8', 'ignore'), end='', file=sys.stdout)
     if printStderr and err:
-        print(err.decode('utf-8'), end='', file=sys.stderr)
+        print(err.decode('utf-8', 'ignore'), end='', file=sys.stderr)
     return (out, err)
 
 
@@ -521,6 +529,7 @@ class TracePrints(object):
 
     def flush(self):
         self.stdout.flush()
+
 
 
 
