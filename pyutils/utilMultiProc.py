@@ -28,6 +28,8 @@ from importlib.machinery import SourceFileLoader
 import shlex
 import subprocess
 import time
+from queue import Queue
+from threading import Thread, Lock
 
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
@@ -248,3 +250,33 @@ class UtilParallelFixedWriter(UtilObject):
         if postProcessCommand is not None:
             args = shlex.split(postProcessCommand)
             subprocess.Popen(args)
+
+
+class UtilMultithreadQueue:
+    """
+    Multithreading fetching of objects
+    """
+    def __init__(self, state, func, threadCount=cpu_count(), maxQueueSize=1000):
+        self.generatorOn_ = True
+        self.state_ = state
+        self.func_ = func
+        self.que_ = Queue(maxsize=maxQueueSize)
+        self.lock_ = Lock()
+        self.threads_ = []
+        for _ in range(threadCount):
+            t = Thread(target=self.worker, args=(state,))
+            self.threads_.append(t)
+            t.start()
+
+    def worker(self, state=None):
+        while True:
+            ret = self.func_(self.state_, self.lock_)
+            if ret is None:
+                return
+            self.que_.put(ret)
+
+    def getData(self):
+        return self.que_.get()
+
+
+
