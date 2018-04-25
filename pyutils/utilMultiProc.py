@@ -257,7 +257,7 @@ class UtilMultithreadQueue:
     Multithreading fetching of objects
     """
     def __init__(self, state, func, threadCount=cpu_count(), maxQueueSize=1000):
-        self.generatorOn_ = True
+        self.on_ = True
         self.state_ = state
         self.func_ = func
         self.que_ = Queue(maxsize=maxQueueSize)
@@ -269,7 +269,7 @@ class UtilMultithreadQueue:
             t.start()
 
     def worker(self, state=None):
-        while True:
+        while self.on_:
             ret = self.func_(self.state_, self.lock_)
             if ret is None:
                 return
@@ -277,6 +277,14 @@ class UtilMultithreadQueue:
 
     def getData(self):
         return self.que_.get()
+
+    def checkData(self):
+        return not self.que_.empty()
+
+    def terminate(self):
+        self.on_ = False
+        while self.checkData():
+            self.getData()
 
 
 
