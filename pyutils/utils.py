@@ -35,6 +35,7 @@ if 'PYPLOT_WITHOUT_DISPLAY' in os.environ:
 from collections import defaultdict as DefDict
 import errno
 import tempfile
+import shutil
 from subprocess import Popen, PIPE
 
 
