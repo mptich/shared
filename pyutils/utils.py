@@ -34,6 +34,7 @@ if 'PYPLOT_WITHOUT_DISPLAY' in os.environ:
     plt.switch_backend('agg')
 from collections import defaultdict as DefDict
 import errno
+import tempfile
 from subprocess import Popen, PIPE
 
 
