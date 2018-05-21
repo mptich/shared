@@ -360,12 +360,17 @@ def UtilSafeMkdir(dirName):
 
 class UtilTemporaryDirectory(object):
     """Context manager for tempfile.mkdtemp() so it's usable with "with" statement."""
+    def __init__(self, dbgKeepDir=False):
+        super().__init__()
+        self.dbgKeepDir_ = dbgKeepDir
+
     def __enter__(self):
-        self.name = tempfile.mkdtemp()
-        return self.name
+        self.name_ = tempfile.mkdtemp()
+        return self.name_
 
     def __exit__(self, exc_type, exc_value, traceback):
-        shutil.rmtree(self.name)
+        if not self.dbgKeepDir_:
+            shutil.rmtree(self.name_)
         
         
 class UtilNotebookLoader(object):
