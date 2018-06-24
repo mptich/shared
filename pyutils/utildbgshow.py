@@ -261,6 +261,16 @@ def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCo
         plt.savefig(saveFile)
 
 
+def UtilDrawBoundingBox(img, yMin, xMin, yMax, xMax, color=(255, 0, 0)):
+    color = np.array(color)
+    img = np.copy(img)
+    img[yMin, xMin:xMax, :] = color
+    img[yMin:yMax, xMin, :] = color
+    img[yMax, xMin:xMax, :] = color
+    img[yMin:yMax, xMax, :] = color
+    return img
+
+
 def UtilDisplayMatrixWithCharts(img, imageName=None, chartList=None, colorList=None, asIs=False):
     """
     Elements in chartList must have values within [0, img.shape[0]] range
