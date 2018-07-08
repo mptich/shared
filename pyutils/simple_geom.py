@@ -139,8 +139,8 @@ class Rect():
       return r
 
   # Returns ratios of overrlap area to areas of self and other
-  def overlapRations(self, other):
-    r = self.overlapRect(self, other)
+  def overlapRatios(self, other):
+    r = self.overlapRect(other)
     if r is None:
       return (0., 0.)
     return (r.area() / self.area(), r.area() / other.area())
@@ -186,6 +186,13 @@ class Rect():
       if other.is_point_inside_rect(corner):
         count += 1
     return (count == 4)
+
+  def inferior(self, other):
+    count = 0
+    for corner in self:
+      if other.is_point_inside_rect(corner):
+        count += 1
+    return (count >= 2)
 
   def overlapsByCorner(self, other):
     count = 0
