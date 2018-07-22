@@ -38,6 +38,16 @@ import tempfile
 import shutil
 from subprocess import Popen, PIPE
 
+if forwardCompat.PythonMinorVersion in (3, 4):
+  _oldWayOfImporting = True
+  from importlib.machinery import SourceFileLoader
+elif forwardCompat.PythonMinorVersion >= 5:
+  _oldWayOfImporting = False
+  import importlib.util
+else:
+  print('BAD MINOR PYTHON VERSION %d' % forwardCompat.PythonMinorVersion)
+  sys.exit()
+
 
 UtilObjectKey = "__utilobjectkey__"
 UtilSetKey = "__utilsetkey__"
@@ -538,7 +548,11 @@ class TracePrints(object):
         self.stdout.flush()
 
 
-
-
-
-
+def UtilLoadModuleByPath(modulePath):
+  if _oldWayOfImporting:
+    return SourceFileLoader(modulePath, modulePath).load_module()
+  else:
+    spec = importlib.util.spec_from_file_location(modulePath, modulePath)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod

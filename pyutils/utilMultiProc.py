@@ -24,7 +24,6 @@ from shared.pyutils.tensorutils import *
 import tempfile
 import csv
 from multiprocessing import cpu_count, Process, Array
-from importlib.machinery import SourceFileLoader
 import shlex
 import subprocess
 import time
@@ -34,7 +33,7 @@ from threading import Thread, Lock
 def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
     if logFileName is not None:
         sys.stdout = sys.stderr = open(logFileName, 'w', 1)
-    module = SourceFileLoader(moduleName, moduleName).load_module()
+    module = UtilLoadModuleByPath(moduleName)
     func = getattr(module, funcName)
     func(*args)
 

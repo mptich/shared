@@ -29,6 +29,8 @@ if sys.version_info[0] < 3:
     print('MUST BE PYTHON 3')
     sys.exit()
 
+PythonMinorVersion = sys.version_info[1]
+
 from functools import reduce
 maxint = sys.maxsize
 
