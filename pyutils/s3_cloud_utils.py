@@ -29,8 +29,8 @@ import sys
 S3Prefix = "s3://"
 
 class S3Object:
-    def __init__(self, profile_name):
-        self.s3_ = boto3.Session(profileName=profileName).resource('s3')
+    def __init__(self, profileName):
+        self.s3_ = boto3.Session(profile_name=profileName).resource('s3')
 
     def getS3Object(self, s3Path):
         return self.s3_.Bucket(s3Path.split('/')[2]).Object('/'.join(s3Path.split('/')[3:]))
