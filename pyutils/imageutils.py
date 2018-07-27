@@ -82,6 +82,15 @@ def UtilFromGrayToRgb(img):
 def UtilImageToInt(img):
     return np.rint(img).astype(np.int).clip(min=0, max=255).astype(np.uint8)
 
+def UtilImageHLSToInt(img):
+    """
+    Translates image to the int values acceptable as HLS
+    """
+    img = np.rint(img).astype(np.int).clip(min=0, max=255).astype(np.uint8)
+    # Hue must be limited to 180 max value
+    img[:, :, 0] = img[:, :, 0].clip(min=0, max=180)
+    return img
+
 def UtilImageToFloat(img):
     return img.astype(np.float32)
 
