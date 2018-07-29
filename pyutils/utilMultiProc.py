@@ -30,7 +30,10 @@ import time
 from queue import Queue
 from threading import Thread, Lock
 
-def _fanMultiProcessCall(moduleName, funcName, logFileName, *args):
+def _fanMultiProcessCall(moduleName, funcName, logFileName, seed, *args):
+    # Initialize random generators for each thread separately
+    random.seed(seed)
+    np.random.seed(seed)
     if logFileName is not None:
         sys.stdout = sys.stderr = open(logFileName, 'w', 1)
     module = UtilLoadModuleByPath(moduleName)
@@ -52,7 +55,7 @@ def UtilFanMultiProcess(moduleName, funcName, listOfArgLists, logFilePrefix=None
         logFileName = None
         if logFilePrefix is not None:
             logFileName = logFilePrefix + ("%05d" % index) + ".txt"
-        pList.append(Process(target=_fanMultiProcessCall, args=(moduleName, funcName, logFileName) + tuple(argList)))
+        pList.append(Process(target=_fanMultiProcessCall, args=(moduleName, funcName, logFileName, index) + tuple(argList)))
 
     # Wait for all child processes to finish
     [p.start() for p in pList]
@@ -262,12 +265,15 @@ class UtilMultithreadQueue:
         self.que_ = Queue(maxsize=maxQueueSize)
         self.lock_ = Lock()
         self.threads_ = []
-        for _ in range(threadCount):
-            t = Thread(target=self.worker, args=(state,))
+        for i in range(threadCount):
+            t = Thread(target=self.worker, args=(i,))
             self.threads_.append(t)
             t.start()
 
-    def worker(self, state=None):
+    def worker(self, seed):
+        # Initialize random generators for each thread separately
+        random.seed(seed)
+        np.random.seed(seed)
         while self.on_:
             ret = self.func_(self.state_, self.lock_)
             if ret is None:
