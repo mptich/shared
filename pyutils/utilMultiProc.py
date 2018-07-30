@@ -23,6 +23,7 @@ from shared.pyutils.utils import *
 from shared.pyutils.tensorutils import *
 import tempfile
 import csv
+import random
 from multiprocessing import cpu_count, Process, Array
 import shlex
 import subprocess
