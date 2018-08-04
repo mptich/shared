@@ -293,4 +293,39 @@ class UtilMultithreadQueue:
             self.getData()
 
 
+class UtilQuickParallelProc:
+  def __init__(self, maxProcCount = 16 * cpu_count()):
+    self.maxProcCount_ = maxProcCount
+    self.procList_ = []
+
+  def run(self, func, argList):
+    p = Process(target=func, args=tuple(argList))
+    p.start()
+    self.procList_.append(p)
+    if len(self.procList_) >= self.maxProcCount_:
+      # Block until at least one process terminates
+      self.waitForCount(self.maxProcCount_ - 1)
+
+  def join(self):
+    # Wait for termination
+    self.waitForCount(0)
+
+  def waitForCount(self, count):
+    while len(self.procList_) > count:
+      # Yield control
+      time.sleep(0)
+      
+      removeList = []
+      for p in self.procList_:
+        if not p.is_alive():
+          removeList.append(p)
+
+      for p in removeList:
+        self.procList_.remove(p)
+
+
+
+
+
+
 
