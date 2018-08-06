@@ -31,14 +31,17 @@ import time
 from queue import Queue
 from threading import Thread, Lock
 
-def _fanMultiProcessCall(moduleName, funcName, logFileName, seed, *args):
+def _fanMultiProcessCall(moduleName, func, logFileName, seed, *args):
     # Initialize random generators for each thread separately
+    # func is actual local function, or function name if it is in another module`
     random.seed(seed)
     np.random.seed(seed)
     if logFileName is not None:
         sys.stdout = sys.stderr = open(logFileName, 'w', 1)
-    module = UtilLoadModuleByPath(moduleName)
-    func = getattr(module, funcName)
+    if moduleName is not None:
+        assert isinstance(func, str)
+        module = UtilLoadModuleByPath(moduleName)
+        func = getattr(module, func)
     func(*args)
 
 
@@ -298,8 +301,9 @@ class UtilQuickParallelProc:
     self.maxProcCount_ = maxProcCount
     self.procList_ = []
 
-  def run(self, func, argList):
-    p = Process(target=func, args=tuple(argList))
+  def run(self, func, argList, logFileName=None):
+    seed = np.random.randint(low=0)
+    p = Process(target=_fanMultiProcessCall, args=(None, func, logFileName, seed) + tuple(argList))
     p.start()
     self.procList_.append(p)
     if len(self.procList_) >= self.maxProcCount_:
