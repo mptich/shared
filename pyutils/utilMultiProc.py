@@ -302,7 +302,7 @@ class UtilQuickParallelProc:
     self.procList_ = []
 
   def run(self, func, argList, logFileName=None):
-    seed = np.random.randint(low=0)
+    seed = np.random.randint(low=0, high=1000000)
     p = Process(target=_fanMultiProcessCall, args=(None, func, logFileName, seed) + tuple(argList))
     p.start()
     self.procList_.append(p)
