@@ -266,8 +266,8 @@ def UtilDrawBoundingBox(img, yMin, xMin, yMax, xMax, color=(255, 0, 0)):
     img = np.copy(img)
     img[yMin, xMin:xMax, :] = color
     img[yMin:yMax, xMin, :] = color
-    img[yMax, xMin:xMax, :] = color
-    img[yMin:yMax, xMax, :] = color
+    img[yMax-1, xMin:xMax, :] = color
+    img[yMin:yMax, xMax-1, :] = color
     return img
 
 
