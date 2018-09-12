@@ -300,15 +300,18 @@ class UtilQuickParallelProc:
   def __init__(self, maxProcCount = 16 * cpu_count()):
     self.maxProcCount_ = maxProcCount
     self.procList_ = []
+    self.cbDict_ = {}
 
-  def run(self, func, argList, logFileName=None):
+  def run(self, func, argList, logFileName=None, callback=None, cbArg=None):
+    # Might block
+    self.waitForCount(self.maxProcCount_ - 1)
+
     seed = np.random.randint(low=0, high=1000000)
     p = Process(target=_fanMultiProcessCall, args=(None, func, logFileName, seed) + tuple(argList))
     p.start()
+    if callback is not None:
+      self.cbDict_[p.pid] = (callback, cbArg)
     self.procList_.append(p)
-    if len(self.procList_) >= self.maxProcCount_:
-      # Block until at least one process terminates
-      self.waitForCount(self.maxProcCount_ - 1)
 
   def join(self):
     # Wait for termination
@@ -325,6 +328,10 @@ class UtilQuickParallelProc:
           removeList.append(p)
 
       for p in removeList:
+        if p.pid in self.cbDict_:
+          callback, cbArg = self.cbDict_[p.pid]
+          del self.cbDict_[p.pid]
+          callback(cbArg)
         self.procList_.remove(p)
 
 
