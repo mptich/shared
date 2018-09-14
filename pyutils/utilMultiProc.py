@@ -297,10 +297,12 @@ class UtilMultithreadQueue:
 
 
 class UtilQuickParallelProc:
-  def __init__(self, maxProcCount = 16 * cpu_count()):
+  def __init__(self, maxProcCount = 2 * cpu_count(), terminateOnError=True):
     self.maxProcCount_ = maxProcCount
     self.procList_ = []
     self.cbDict_ = {}
+    self.logDict_ = {}
+    self.terminateOnError_ = terminateOnError
 
   def run(self, func, argList, logFileName=None, callback=None, cbArg=None):
     # Might block
@@ -309,6 +311,7 @@ class UtilQuickParallelProc:
     seed = np.random.randint(low=0, high=1000000)
     p = Process(target=_fanMultiProcessCall, args=(None, func, logFileName, seed) + tuple(argList))
     p.start()
+    self.logDict_[p.pid] = logFileName
     if callback is not None:
       self.cbDict_[p.pid] = (callback, cbArg)
     self.procList_.append(p)
@@ -325,6 +328,15 @@ class UtilQuickParallelProc:
       removeList = []
       for p in self.procList_:
         if not p.is_alive():
+          if p.exitcode != 0:
+            errStr = "Process id %d log file %s failed" % \
+              (p.pid, self.logDict_[p.pid])
+            if self.terminateOnError_:
+              raise Exception(errStr)
+            else:
+              print("ERROR: %s" % errStr)
+              self.terminate()
+              return False
           removeList.append(p)
 
       for p in removeList:
@@ -332,7 +344,29 @@ class UtilQuickParallelProc:
           callback, cbArg = self.cbDict_[p.pid]
           del self.cbDict_[p.pid]
           callback(cbArg)
+        del self.logDict_[p.pid]
         self.procList_.remove(p)
+
+    return True
+
+
+  def terminate(self):
+    # Forcefully terminate all processes
+    for p in self.procList_:
+      if p.is_alive():
+        p.terminate()
+
+    while True:
+      finished = True
+      for p in self.procList_:
+        if p.is_alive():
+          finished = False
+      if finished:
+        break
+      # Yield control
+      time.sleep(0)
+
+
 
 
 
