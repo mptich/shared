@@ -512,13 +512,11 @@ class UtilSimpleLinkedList(UtilObject):
 
 def UtilShellCmd(cmd, printCmd=True, printStdout=True, printStderr=True):
     if printCmd:
-        print(cmd)
-    try:
-        p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-        out, err = p.communicate()
-    except Exception as ex:
-        out = b""
-        err = bytes(str(ex), 'utf-8')
+        print('UtilShellCmd CMD: %s' % cmd)
+
+    p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    out, err = p.communicate()
+
     if printStdout and out:
         print(out.decode('utf-8', 'ignore'), end='', file=sys.stdout)
     if printStderr and err:

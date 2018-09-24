@@ -25,6 +25,7 @@ import tempfile
 import csv
 import random
 from multiprocessing import cpu_count, Process, Array
+import multiprocessing
 import shlex
 import subprocess
 import time
@@ -294,6 +295,73 @@ class UtilMultithreadQueue:
         self.on_ = False
         while self.checkData():
             self.getData()
+
+
+class UtilMultiprocQueue:
+    """
+    Multiproc fetching of objects
+    """
+    def __init__(self, func, name="", procCount=cpu_count(),
+        logFileDir=None, maxQueueSize=1000):
+        self.on_ = True
+        self.state_ = None
+        self.func_ = func
+        self.name_ = name
+        self.manager_ = multiprocessing.Manager()
+        self.que_ = self.manager_.Queue(maxsize=maxQueueSize)
+        self.logFileDir_ = logFileDir;
+        self.lock_ = self.manager_.Lock()
+        self.procs_ = []
+        for i in range(procCount):
+            p = Process(target=self.worker, args=(i,))
+            self.procs_.append(p)
+
+    def start(self):
+      for p in self.procs_:
+        p.start()
+
+    def setState(self, state):
+      self.state_ = state
+
+    def worker(self, index):
+        # Initialize random generators for each thread separately
+        random.seed(index)
+        np.random.seed(index)
+        if self.logFileDir_ is not None:
+          sys.stdout = sys.stderr = open(
+            self.logFileDir_ + ('/%04d_%s.txt' % (index, self.name_)), 'w', 1)
+        while self.on_:
+            ret, val = self.func_(self.state_, self.lock_)
+            if ret is None:
+                return
+            if not ret:
+              # Yield control and continue, no data for the queue
+              time.sleep(0.)
+              continue
+            self.que_.put(val)
+
+    def getData(self):
+        return self.que_.get()
+
+    def checkData(self):
+        return not self.que_.empty()
+
+    def lock(self):
+      self.lock_.acquire()
+
+    def unlock(self):
+      self.lock_.release()
+
+    def getManager(self):
+      return self.manager_
+
+    def terminate(self):
+        self.on_ = False
+        while self.checkData():
+            self.getData()
+        for p in self.procs_:
+          p.join()
+
 
 
 class UtilQuickParallelProc:
