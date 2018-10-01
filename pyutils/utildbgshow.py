@@ -271,6 +271,30 @@ def UtilDrawBoundingBox(img, yMin, xMin, yMax, xMax, color=(255, 0, 0)):
     return img
 
 
+def UtilFindDrawnBoundingBox(img, color=(255, 0, 0)):
+    """
+    Finds a bounding box stored in a non-lossy format (like PNG).
+    This function, of course, is not guaranteed to find the right rectangle.
+    """
+    annots = np.all(np.rint(img) == color, axis=-1)
+    rowCounts = np.sum(annots, axis=1)
+    colCounts = np.sum(annots, axis=0) 
+    rowArgs = np.argsort(-rowCounts)
+    colArgs = np.argsort(-colCounts)
+    yMin = np.min(rowArgs[:2])
+    yMax = np.max(rowArgs[:2])
+    xMin = np.min(colArgs[:2])
+    xMax = np.max(colArgs[:2])
+    if not (rowCounts[yMin] and rowCounts[yMax] and \
+      colCounts[xMin] and colCounts[xMax]):
+      # No rectangle of this color
+      return None
+    highConfidence = True
+    if (rowCounts[yMin] != rowCounts[yMax]) or (colCounts[xMin] != colCounts[xMax]):
+      highConfidence = False
+    return (yMin, xMin, yMax, xMax, highConfidence)
+
+
 def UtilDisplayMatrixWithCharts(img, imageName=None, chartList=None, colorList=None, asIs=False):
     """
     Elements in chartList must have values within [0, img.shape[0]] range
