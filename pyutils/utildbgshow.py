@@ -264,9 +264,17 @@ def UtilDrawHistogram(inputList=None, bins='fd', show=True, saveFile=None, logCo
 def UtilDrawBoundingBox(img, yMin, xMin, yMax, xMax, color=(255, 0, 0)):
     color = np.array(color)
     img = np.copy(img)
-    img[yMin, xMin:xMax, :] = color
+    width = img.shape[1]
+    # Rectangle might wrap around
+    if xMax < xMin:
+      img[yMin, xMin:width, :] = color
+      img[yMin, 0:xMax, :] = color
+      img[yMax-1, xMin:width, :] = color
+      img[yMax-1, 0:xMax, :] = color
+    else:
+      img[yMin, xMin:xMax, :] = color
+      img[yMax-1, xMin:xMax, :] = color
     img[yMin:yMax, xMin, :] = color
-    img[yMax-1, xMin:xMax, :] = color
     img[yMin:yMax, xMax-1, :] = color
     return img
 
