@@ -310,7 +310,7 @@ def UtilGetBoundingBoxPoints(imgHeight, imgWidth, yMin, xMin, yMax, xMax, densit
       for j in range(start - offset, end, density[1]):
         val = i + j
         if (val >= start) and (val <= end):
-          s.add(i + j)
+          s.add(val)
     return s
 
   def _extend_y(yx_set, y, x_set):
