@@ -451,7 +451,7 @@ def UtilDisplay3d(object_list):
     elif isinstance(colors, tuple):
       color = np.array(list(colors)).astype(np.float) / 255
       pcd.paint_uniform_color(color)
-    elif colors == "axis":
+    elif isinstance(colors, str) and (colors == "axis"):
       assert lines is None
       min_vals = np.min(points, axis=0)
       max_vals = np.max(points, axis=0)
